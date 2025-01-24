@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "pytheos"
+version = "0.1.0"
+description = ""
+authors = ["Jacob Sivak <jacobsivak7@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+pymatgen = "^2025.1.24"
+custodian = "^2024.10.16"
+ase = "^3.24.0"
+chgnet = "^0.4.0"
+mp-api = "^0.45.1"
+sumo = "^2.3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
