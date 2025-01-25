@@ -3,12 +3,14 @@
 
 def xmu_dat_to_df(
     xmu_path: str = "xmu.dat",
+    feff_inp_path: str = "feff.inp",
 ):
     """
     Converts the xmu.dat output from FEFF to a Pandas dataframe object.
 
     Args:
         xmu_path (str, optional): Relative path to xmu.dat data file. Defaults to "xmu.dat".
+        feff_inp_path (str, optional): Relative path to feff.inp file. Defaults to "feff.inp".
 
     Returns:
         pd.DataFrame: Pandas dataframe object of FEFF output data from xmu.dat.
@@ -18,7 +20,7 @@ def xmu_dat_to_df(
 
     print(f"Reading {xmu_path} as Pandas DataFrame")
 
-    xmu = outputs.Xmu.from_file(xmu_dat_file=xmu_path)
+    xmu = outputs.Xmu.from_file(xmu_dat_file=xmu_path, feff_inp_file=feff_inp_path)
 
     edge = xmu.edge
     absorbing_atom = xmu.absorbing_atom
