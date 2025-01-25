@@ -15,7 +15,7 @@ def read_structure_to_ASEAtoms(file_path: str):
     from ase import io
 
     s = io.read(f"{file_path}")
-    print(f"{file_path} read in as ASE Atoms object...")
+    print(f"{file_path} read in as ASE Atoms object")
     return s
 
 
@@ -39,4 +39,4 @@ def write_structure_from_aseAtoms(struc: Atoms, file_path: str, overwrite=False)
         raise FileExistsError(file_path)
 
     io.write(f"{file_path}", struc, direct=True)
-    print(f"ASE.Atoms written to {file_path}...")
+    print(f"ASE Atoms written to {file_path}")

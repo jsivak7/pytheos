@@ -28,7 +28,7 @@ def write_xanes_inputs(
     import os
     import yaml
 
-    print("Writing XANES input files...")
+    print(f"Writing XANES input files to {output_dir}")
 
     if os.path.exists(output_dir):
         raise FileExistsError(output_dir)
@@ -71,7 +71,7 @@ def write_feff_custodian_script(
         output_dir (str, optional): Relative path to create 'cstdn_feff.py' script. Defaults to ".".
         max_errors (int, optional): Max number of errors for Custodian to try to correct. Defaults to 3.
     """
-    print("Writing FEFF Custodian script...")
+    print(f"Writing FEFF Custodian script to {output_dir}")
     custodian_script = f"""# runs the FEFF10 software using Custodian package.
 
 from custodian.custodian import Custodian

@@ -16,7 +16,7 @@ def xmu_dat_to_df(
     from pymatgen.io.feff import outputs
     import pandas as pd
 
-    print(f"Reading {xmu_path} as Pandas DataFrame...")
+    print(f"Reading {xmu_path} as Pandas DataFrame")
 
     xmu = outputs.Xmu.from_file(xmu_dat_file=xmu_path)
 
