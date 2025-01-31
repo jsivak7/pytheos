@@ -1,5 +1,5 @@
 # for analysis of VASP results
-# TODO ensure this works
+# TODO ensure this works as desired
 
 
 def calc_form_decomp_energy(

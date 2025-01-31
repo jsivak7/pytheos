@@ -1,8 +1,10 @@
 # General utilities
+
 from ase import Atoms
+from pymatgen.core import Structure
 
 
-def read_structure_to_ASEAtoms(file_path: str) -> Atoms:
+def read_structure_to_ase_atoms(file_path: str) -> Atoms:
     """
     Read in structure file to ASE Atoms Object
 
@@ -19,7 +21,7 @@ def read_structure_to_ASEAtoms(file_path: str) -> Atoms:
     return s
 
 
-def write_structure_from_aseAtoms(
+def write_structure_from_ase_atoms(
     struc: Atoms,
     file_path: str,
     overwrite=False,
@@ -36,7 +38,7 @@ def write_structure_from_aseAtoms(
         sort (bool): sort structure elements by electronegativity using Pymatgen. Defaults to True.
 
     Raises:
-        FileExistsError: if given path for output file already exists, ensures that previously generated SQSs are not overwritten
+        FileExistsError: if given path for output file already exists, ensures that previously generated structures are not overwritten
     """
     import os
     from ase import io

@@ -1,4 +1,6 @@
-# Visualize octahedral antiferromagnetic orderings
+# Magnetic Orderings - TODO!!
+
+Visualize octahedral antiferromagnetic orderings -->
 ![plot](../../../docs/afm_orderings.jpg)
 
 Figure from:
