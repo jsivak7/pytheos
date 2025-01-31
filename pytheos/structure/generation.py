@@ -22,24 +22,6 @@ def make_supercell(struc: Atoms, dimensions: tuple):
     return struc.repeat(dimensions)
 
 
-def rattle_atoms(struc: Atoms, stddev=0.02):
-    """
-    Rattles atoms of a given input structure - often is helpful prior to relaxation to break initial symmetry
-
-    Args:
-        struc (Atoms): structure to be rattled
-        stddev (float, optional): standard deviation for amount of rattling to perform in Angstroms. Defaults to 0.02.
-
-    Returns:
-        Atoms: ASE Atoms object for rattled structure
-    """
-    import random
-
-    struc.rattle(stddev, seed=int(random.uniform(0, 2000)))  # random seed
-
-    return struc
-
-
 def make_sqs(
     struc: Atoms,
     dimensions: tuple,
