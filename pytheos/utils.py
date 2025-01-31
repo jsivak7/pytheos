@@ -19,7 +19,12 @@ def read_structure_to_ASEAtoms(file_path: str):
     return s
 
 
-def write_structure_from_aseAtoms(struc: Atoms, file_path: str, overwrite=False):
+def write_structure_from_aseAtoms(
+    struc: Atoms,
+    file_path: str,
+    overwrite=False,
+    sort=True,
+):
     """
     Write ASE Atoms object to structure file
     NOTE that always writes "direct" coordinates
@@ -28,6 +33,7 @@ def write_structure_from_aseAtoms(struc: Atoms, file_path: str, overwrite=False)
         struc (Atoms): structure to be written
         file_path (str): relative path to write structure file, include suffix for desired file type (*.vasp, *.cif, etc.)
         overwrite (bool): override to write over file already made. Defaults to False.
+        sort (bool): sort structure elements by electronegativity using Pymatgen. Defaults to True.
 
     Raises:
         FileExistsError: if given path for output file already exists, ensures that previously generated SQSs are not overwritten
@@ -37,6 +43,14 @@ def write_structure_from_aseAtoms(struc: Atoms, file_path: str, overwrite=False)
 
     if os.path.exists(file_path) and overwrite == False:
         raise FileExistsError(file_path)
+
+    if sort == True:
+        print("Sorting structure by electronegativity.")
+        from pymatgen.core import Structure
+
+        struc_pmg = Structure.from_ase_atoms(struc)
+        struc_pmg.sort()
+        struc = struc_pmg.to_ase_atoms()
 
     io.write(f"{file_path}", struc, direct=True)
     print(f"ASE Atoms written to {file_path}")
