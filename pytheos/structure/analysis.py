@@ -26,6 +26,28 @@ def get_diffraction_pattern(struc: Atoms, scaled=True) -> dict:
     return diffraction_data
 
 
+def get_lattice_parameters(struc: Atoms) -> tuple:
+    """
+    Gets lattice parmeters from an ASE Atoms object.
+
+    Args:
+        struc (Atoms): Structure input.
+
+    Returns:
+        tuple: (a, b, c)
+    """
+
+    from pymatgen.core.structure import Structure
+    import numpy as np
+
+    struc = Structure.from_ase_atoms(struc)
+    lattice_parameters = struc.lattice.abc
+    print(f"a = {np.round(lattice_parameters[0], 4)} \u212b")
+    print(f"b = {np.round(lattice_parameters[1], 4)} \u212b")
+    print(f"c = {np.round(lattice_parameters[2], 4)} \u212b")
+    return lattice_parameters
+
+
 def get_firstNN_bonds(
     struc: Atoms,
     atom_num: int,
@@ -128,13 +150,14 @@ def get_firstNN_bonds(
                 )
             )
 
-    else:  # should be anion
+    else:  # should be anion - printing for clarity
         print("Current atom is an anion ({})!".format(anion))
 
     return distances
 
 
-# TODO
+# TODO NEEDS TO BE FIXED I THINK - CAREFUL USING YET
+# TODO I BELIEVE I HAVE AN OPTIMIZED VERSION OF THIS FUNCTION IN PEROVSKITE CONDUCTORS PROJECT FILES
 def get_octahedral_bondangles(
     struc_path: str,
     bsite_cations: tuple,
@@ -241,25 +264,3 @@ def get_octahedral_bondangles(
     print(f"avg bond angle:\t\t{avg_bondangle:.1f}\u00b0")
     print(f"elapsed time:\t\t{end_time-start_time:.2f} seconds")
     return avg_bondangle
-
-
-# TODO
-def get_lattice_parameters(struc="output.vasp"):
-    """
-    Gets lattice parmeters for a CONTCAR structure
-
-    Args:
-        structure (string): structure file
-            - default = 'CONTCAR'
-
-    Returns:
-        1d list of lattice parameters: [a, b, c]
-    """
-
-    from pymatgen.core.structure import Structure
-
-    lattice_parameters = struc.lattice.abc
-    print("a = {:.4f} \u212b".format(lattice_parameters[0]))
-    print("b = {:.4f} \u212b".format(lattice_parameters[1]))
-    print("c = {:.4f} \u212b".format(lattice_parameters[2]))
-    return lattice_parameters
