@@ -1,10 +1,10 @@
 # For creating FEFF input files and directories
 
-import ase
+from ase import Atoms
 
 
 def write_xanes_inputs(
-    structure: ase.Atoms,
+    structure: Atoms,
     absorbing_atom: int,
     output_dir: str,
     user_xanes_changes: dict = None,
@@ -14,7 +14,7 @@ def write_xanes_inputs(
     Each FEFF calculation should be run in its own directory to ensure files are not overwritten.
 
     Args:
-        structure (ase.Atoms): ASE Atoms object for structure.
+        structure (Atoms): ASE Atoms object for structure.
         absorbing_atom (int): Number in structure for absorbing atom of interest.
         output_dir (str): Relative path to create output directory with associated files.
         user_xanes_changes (dict, optional): Override for default card settings in 'xanes_cards.yaml'. Defaults to None.

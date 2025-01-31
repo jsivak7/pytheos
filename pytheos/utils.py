@@ -10,7 +10,7 @@ def read_structure_to_ASEAtoms(file_path: str):
         file_path (str): relative path to structure file
 
     Returns:
-        Atoms: modular object to perform other operations
+        Atoms: ASE object to perform other operations
     """
     from ase import io
 
