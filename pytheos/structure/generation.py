@@ -3,12 +3,7 @@
 from ase import Atoms
 
 
-def make_unitcell(crystal_structure: str):
-    # TODO should make with ASE.io.build.bulk for specific crystal structures of interest (rocksalt, spinel, perovskite, etc.)
-    return crystal_structure
-
-
-def make_supercell(struc: Atoms, dimensions: tuple):
+def make_supercell(struc: Atoms, dimensions: tuple) -> Atoms:
     """
     Make supercell from ASE Atoms object
 
@@ -29,7 +24,7 @@ def make_sqs(
     cutoffs: list,
     concentrations: dict,
     num_steps: int,
-):
+) -> Atoms:
     """
     Generate special quasirandom structure (SQS) for an arbitrary input structure using ICET (https://icet.materialsmodeling.org/)
 
@@ -83,7 +78,7 @@ def make_random(
     dimensions: tuple,
     chemical_symbols: list,
     concentrations: dict,
-):
+) -> Atoms:
     """
     Randomly decorate an arbitrary input structure with ICET (https://icet.materialsmodeling.org/)
 

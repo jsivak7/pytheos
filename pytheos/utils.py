@@ -2,7 +2,7 @@
 from ase import Atoms
 
 
-def read_structure_to_ASEAtoms(file_path: str):
+def read_structure_to_ASEAtoms(file_path: str) -> Atoms:
     """
     Read in structure file to ASE Atoms Object
 
@@ -56,7 +56,7 @@ def write_structure_from_aseAtoms(
     print(f"ASE Atoms written to {file_path}")
 
 
-def rattle_atoms(struc: Atoms, stddev=0.02):
+def rattle_atoms(struc: Atoms, stddev=0.02) -> Atoms:
     """
     Rattles atoms of a given input structure - often is helpful prior to relaxation to break initial symmetry
 
