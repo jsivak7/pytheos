@@ -28,7 +28,7 @@ def write_xanes_inputs(
     import os
     import yaml
 
-    print(f"Writing XANES input files to {output_dir}")
+    print(f"Writing FEFF XANES input files to {output_dir}")
 
     if os.path.exists(output_dir):
         raise FileExistsError(output_dir)
