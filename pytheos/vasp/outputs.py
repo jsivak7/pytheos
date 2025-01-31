@@ -1,11 +1,9 @@
-"""
-For extracting data from VASP calculation outputs
-"""
+# for extracting data from VASP calculation outputs
 
 
-def get_formula(run="vasprun.xml"):
+def get_chemical_formula(run="vasprun.xml"):
     """
-    Extracts the chemical formula for a VASP calculation
+    Extracts the chemical formula
 
     Args:
         run (str, optional): relative location for vasprun.xml file. Defaults to "vasprun.xml".
@@ -95,7 +93,7 @@ def get_bandgap(run="vasprun.xml"):
     Extracts electronic band gap from a VASP calculation.
     - NOTE to be careful given the recently issues with the ISMEAR = -5 issues with Fermi energy placement
         (https://www.vasp.at/forum/viewtopic.php?t=18407)
-        - recommendation from JTSivak for this issue -> (https://www.vasp.at/forum/viewtopic.php?t=17981)
+        - recommendation from Martin Schlipf for this issue -> (https://www.vasp.at/forum/viewtopic.php?t=17981)
     - one should also be careful to have an adequately sampled DOS (NEDOS = large, odd value)
 
     Args:
