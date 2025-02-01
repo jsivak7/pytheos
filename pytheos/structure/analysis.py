@@ -1,6 +1,4 @@
 # for analyzing structures
-# I think I have somewhat optimized versions of these somewhere...???
-# TODO look around for these across different projects...
 
 from ase import Atoms
 

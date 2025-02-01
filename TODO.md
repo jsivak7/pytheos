@@ -1,3 +1,4 @@
+- [ ] magnetic ordering for rocksalt, perovskite, and spinel
 - [ ] add in how to extract different materials and their properties from MP
 - [ ] write some tests for modules
 - [ ] write examples of how modules function for others to use

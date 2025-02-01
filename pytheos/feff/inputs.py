@@ -59,6 +59,7 @@ def write_feff_custodian_script(
 ):
     """
     Writes a python script that can be used to run FEFF using Custodian (https://github.com/materialsproject/custodian).
+
     This can be used for any FEFF calculation (XANES, EXAFS, etc.).
 
     One should preferentially use this to run FEFF over just utilizing the command line

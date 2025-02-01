@@ -10,7 +10,7 @@ def run_relax(
     # TODO can you run constrained relaxations (i.e. like ISIF = 8 in VASP?)
 ):
     """
-    For running CHGNet relaxation at 0K for a single structure file
+    For running CHGNet relaxation at 0K for an inputted ASE Atoms object
     - NOTE that resulting energy includes the MP2020Compatibility corrections from Materials Project
         - (https://docs.materialsproject.org/methodology/materials-methodology/thermodynamic-stability/thermodynamic-stability/anion-and-gga-gga+u-mixing)
 

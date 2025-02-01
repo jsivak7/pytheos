@@ -131,9 +131,12 @@ c.run()"""
 
 def make_dos_calc():
     """
-    Moves all relaxation files to a new directory called '01_relax' and gets everything ready for a density of states calculation.
+    Moves all relaxation files to a new directory called '01_relax' and gets everything ready for a density of states (DOS) calculation.
 
-    Call in the same location as a relaxation files.
+    Call in the same location as relaxation files.
+
+    Changes the NELECT value per https://www.vasp.at/forum/viewtopic.php?t=17981 -> NELECT - 1 + 0.999999
+    - ensures proper Fermi level placement
     """
 
     import os

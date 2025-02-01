@@ -1,4 +1,4 @@
-# Only listing the flags that will are not the FEFF defaults
+# Only listing the flags that are not the FEFF defaults
 
 COREHOLE: RPA # Random Phase Approximation screened core hole - safer than Final State Rule (FSR) unscreened core hole despite higher cost
 EDGE: K # set edge to calculate - defaults to K-edge
