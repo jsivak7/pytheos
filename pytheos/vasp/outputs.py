@@ -144,23 +144,38 @@ def calc_form_decomp_energy(
         if e.name == "target":  # only for our entry of interest
             e_form = phasediagram.get_form_energy_per_atom(e)
             e_decomp = phasediagram.get_decomp_and_phase_separation_energy(e)[1]
-            decomp = phasediagram.get_decomp_and_phase_separation_energy(e)[0]
-            decomp_formula = ""
-
-            # for getting the decomposition reaction in a nicer format
-            for decomp_entry in range(len(list(decomp))):
-                decomp_formula += "{:.2f}".format(list(decomp.values())[decomp_entry])
-                decomp_formula += "({})".format(
-                    list(decomp.keys())[decomp_entry].composition.reduced_formula
-                )
-                if decomp_entry != range(len(list(decomp.keys())))[-1]:
-                    decomp_formula += " + "
+            decomp_entries = phasediagram.get_decomp_and_phase_separation_energy(e)[0]
 
     return {
         "form_energy": e_form,
         "decomp_energy": e_decomp,
-        "decomp_rxn": decomp_formula,
+        "decomp_entries": decomp_entries,
     }
+
+
+def cleanup_decomp_rxn(decomp_entries: dict):
+    """
+    Cleans up decomposition reaction from Pymatgen ComputedStructureEntries to a simpler, human-readable string.
+
+    Args:
+        decomp_entries (dict): Dictionaries of ComputedStructureEntries outputted the calc_form_decom_energy function "decomp_entries"
+
+    Returns:
+        string: Decomposition reaction - ex. 0.25(MgO) + 0.75(NiO)
+    """
+    from pymatgen.analysis import phase_diagram
+
+    decomp_formula = ""
+
+    for decomp_entry in range(len(list(decomp_entries))):
+        decomp_formula += "{:.2f}".format(list(decomp_entries.values())[decomp_entry])
+        decomp_formula += "({})".format(
+            list(decomp_entries.keys())[decomp_entry].composition.reduced_formula
+        )
+        if decomp_entry != range(len(list(decomp_entries.keys())))[-1]:
+            decomp_formula += " + "
+
+    return decomp_formula
 
 
 def extract_optical_data(run="vasprun.xml", anisotropic=False):
