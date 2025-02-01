@@ -52,7 +52,7 @@ def get_firstNN_bonds(
     num_NNs: int,
     radius=3.00,
     anion="O",
-):
+) -> list:
     """
     Gets all first nearest neighbor (NN) bond lengths for a specified cation with surrounding anions within a structure.
 
@@ -162,7 +162,7 @@ def get_octahedral_bondangles(
     bondlength_max=2.5,
     bondangle_min=120,
     write_csv=False,
-):
+) -> list:
     """
     Given a structure file, extracts the B-O-B bond angles.
     - NOTE that function currently does not take into account PBCs, thus a 2x2x2 supercell is used

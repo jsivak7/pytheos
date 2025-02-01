@@ -2,6 +2,7 @@
 
 from pymatgen.io.vasp import Vasprun
 from ase import Atoms
+from pandas import DataFrame
 
 
 def load_vasprun(
@@ -44,7 +45,7 @@ def load_vasprun(
     return v
 
 
-def calc_mp2020compat_energy(run: Vasprun):
+def calc_mp2020compat_energy(run: Vasprun) -> float:
     """
     Calculates the corrected energy using the MP2020Compatbility correction scheme for GGA/GGA+U and anion mixing calculations.
     - https://docs.materialsproject.org/methodology/materials-methodology/thermodynamic-stability/thermodynamic-stability/anion-and-gga-gga+u-mixing
@@ -80,7 +81,7 @@ def calc_form_decomp_energy(
     energy_per_atom: float,
     MPApiKey: str,
     xc: str = "GGA_GGA+U",
-):
+) -> dict:
     """
     Calculates the formation and decomposition energies using the Materials Project database.
     - see C.J. Bartel et al. Npj Comput Mater 5 (2019) 4. https://doi.org/10.1038/s41524-018-0143-2 for more details on computation
@@ -153,7 +154,7 @@ def calc_form_decomp_energy(
     }
 
 
-def cleanup_decomp_rxn(decomp_entries: dict):
+def cleanup_decomp_rxn(decomp_entries: dict) -> str:
     """
     Cleans up decomposition reaction from Pymatgen ComputedStructureEntries to a simpler, human-readable string.
 
@@ -178,7 +179,7 @@ def cleanup_decomp_rxn(decomp_entries: dict):
     return decomp_formula
 
 
-def extract_optical_data(run="vasprun.xml", anisotropic=False):
+def extract_optical_data(run="vasprun.xml", anisotropic=False) -> DataFrame:
     """
     Uses Sumo (https://github.com/SMTG-Bham/sumo) to extract dielectric function from VASP calculation
     and then converts it to the real part of the refractive index.

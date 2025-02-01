@@ -8,7 +8,7 @@ def write_relax_inputs(
     output_dir: str,
     user_incar_changes=None,
     functional="r2scan",
-):
+) -> None:
     """
     Makes VASP input files (INCAR, KPOINTS, POSCAR, POTCAR) using Pymatgen for a relaxation calculation
 
@@ -67,7 +67,7 @@ def write_relax_inputs(
 
 def write_custodian_doublerelax(
     output_path: str, kspacing=0.25, half_kmesh_first_relax=True
-):
+) -> None:
     """
     Write a generic double relaxation script for calculation workflow and error handling using Custodian (https://github.com/materialsproject/custodian).
 
@@ -129,7 +129,7 @@ c.run()"""
         f.writelines(cstdn_script)
 
 
-def make_dos_calc():
+def make_dos_calc() -> None:
     """
     Moves all relaxation files to a new directory called '01_relax' and gets everything ready for a density of states (DOS) calculation.
 
@@ -281,7 +281,7 @@ def get_magorder(calc_path: str, magorder_name: str, coordinate_rounding=0):
 
 
 # TODO just copied in for now from the perovskite HEO project - still needs to be fixed
-def set_up_optical_calc(sigma=0.1):
+def set_up_optical_calc(sigma=0.1) -> None:
     """
     For making a new directory for optical calculations (should be called in directory where "02_static" exists).
     - NBANDS is doubled from the default value of 02_static calculation

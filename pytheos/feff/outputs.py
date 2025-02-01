@@ -1,10 +1,12 @@
 # For parsing FEFF output files
 
+from pandas import DataFrame
+
 
 def xmu_dat_to_df(
     xmu_path: str = "xmu.dat",
     feff_inp_path: str = "feff.inp",
-):
+) -> DataFrame:
     """
     Converts the xmu.dat output from FEFF to a Pandas dataframe object.
 

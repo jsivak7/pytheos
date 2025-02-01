@@ -8,7 +8,7 @@ def write_xanes_inputs(
     absorbing_atom: int,
     output_dir: str,
     user_xanes_changes: dict = None,
-):
+) -> None:
     """
     Creates input directory and populates with associated files for running a XANES calculation in FEFF.
     Each FEFF calculation should be run in its own directory to ensure files are not overwritten.
@@ -56,7 +56,7 @@ def write_feff_custodian_script(
     feff_cmd: str,
     output_dir: str = ".",
     max_errors=3,
-):
+) -> None:
     """
     Writes a python script that can be used to run FEFF using Custodian (https://github.com/materialsproject/custodian).
 
