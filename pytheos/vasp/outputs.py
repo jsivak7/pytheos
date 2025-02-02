@@ -280,3 +280,35 @@ def extract_optical_data(run="vasprun.xml", anisotropic=False) -> DataFrame:
     df_final = pd.DataFrame().from_dict(data_all)
 
     return df_final
+
+
+def bader_convert_ACF_dat_to_csv() -> None:
+    """
+    Converts the ACF.dat output file from VASP Bader charge analysis to a .csv file with the name ACF.csv
+    - https://theory.cm.utexas.edu/henkelman/code/bader/
+    - NOTE: call in the same location as relaxation files.
+    """
+
+    os.system("cp ACF.dat ACF.csv")
+
+    os.system("perl -pi -e 's/    /,/g' ACF.csv")  # four spaces
+    os.system("perl -pi -e 's/   /,/g' ACF.csv")  # three spaces
+    os.system("perl -pi -e 's/  /,/g' ACF.csv")  # two spaces
+    os.system("perl -pi -e 's/ /,/g' ACF.csv")  # one space
+
+    os.system("perl -pi -e 's/-//g' ACF.csv")  # dashes removed
+
+    os.system("perl -pi -e 's/,,,/,/g' ACF.csv")
+    os.system("perl -pi -e 's/,,/,/g' ACF.csv")
+
+    os.system("sed -i 's/^.\{1\}//g' ACF.csv")
+
+    os.system("perl -pi -e 's/#/ATOM_NUM/g' ACF.csv")
+
+    os.system("perl -pi -e 's/MIN,DIST/MIN_DIST/g' ACF.csv")
+    os.system("perl -pi -e 's/ATOMIC,VOL/ATOMIC_VOL/g' ACF.csv")
+
+    os.system("perl -pi -e 's/VACUUM.*//g' ACF.csv")  # ending removed
+    os.system("perl -pi -e 's/NUMBER.*//g' ACF.csv")  # ending removed
+
+    os.system("sed -i '/^$/d' ACF.csv")  # remove all blank lines
