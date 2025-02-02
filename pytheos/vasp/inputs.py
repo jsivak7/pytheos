@@ -126,10 +126,7 @@ jobs = [step1, step2]
 c = Custodian(handlers, jobs, max_errors=3)
 c.run()"""
     with open(f"{output_path}/cstdn.py", "w+") as f:
-        f.writelines(cstdn_script)
-
-
-def make_dos_calc() -> None:
+        f.writelines(cstdn_script)def make_dos_calc() -> None:
     """
     Moves all relaxation files to a new directory called '01_relax' and gets everything ready for a density of states (DOS) calculation.
 
@@ -174,6 +171,9 @@ def make_dos_calc() -> None:
     os.system("perl -pi -e 's/NSW = 250/NSW = 0/g' INCAR")
     os.system("perl -pi -e 's/LCHARG = True/LCHARG = False/g' INCAR")
     os.system("perl -pi -e 's/LWAVE = True/LWAVE = False/g' INCAR")
+    os.system(
+        "perl -pi -e 's/ALGO.*/ALGO = Normal/g' INCAR"
+    )  # usually better for ISMEAR = -5
 
     os.system(f"echo NEDOS = 501 >> INCAR")
 
