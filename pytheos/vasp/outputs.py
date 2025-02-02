@@ -289,6 +289,8 @@ def bader_convert_ACF_dat_to_csv() -> None:
     - NOTE: call in the same location as relaxation files.
     """
 
+    import os
+
     os.system("cp ACF.dat ACF.csv")
 
     os.system("perl -pi -e 's/    /,/g' ACF.csv")  # four spaces
