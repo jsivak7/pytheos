@@ -239,7 +239,7 @@ def set_up_bader(
 
 
 def write_custodian_static(
-    output_path: str,
+    output_dir: str,
     vasp_cmd: tuple = ("srun", "vasp_std"),
 ) -> None:
     """
@@ -247,10 +247,10 @@ def write_custodian_static(
     - https://github.com/materialsproject/custodian
 
     Args:
-        output_path (str): relative path to write submission file
+        output_dir (str): relative path to write submission file.
 
     Returns:
-        None: {output_path}/cstdn.py script written.
+        None: {output_dir}/cstdn.py script written.
     """
 
     cstdn_script = f"# Custodian static script.\n\nvasp_cmd = {vasp_cmd}\n"
@@ -271,12 +271,12 @@ step1 = VaspJob(
 jobs = [step1]
 c = Custodian(handlers, jobs, max_errors=3)
 c.run()"""
-    with open(f"{output_path}/cstdn.py", "w+") as f:
+    with open(f"{output_dir}/cstdn.py", "w+") as f:
         f.writelines(cstdn_script)
 
 
 def write_custodian_doublerelax(
-    output_path: str,
+    output_dir: str,
     vasp_cmd: tuple = ("srun", "vasp_std"),
     kspacing=0.25,
     half_kmesh_first_relax=True,
@@ -292,12 +292,12 @@ def write_custodian_doublerelax(
     - see discussion -> https://github.com/hackingmaterials/atomate/issues/19
 
     Args:
-        output_path (str): relative path to write submission file
+        output_dir (str): relative path to write submission file
         kspacing (float, optional): K-point mesh spacing with VASP KSPACING tag (https://www.vasp.at/wiki/index.php/KSPACING). Defaults to 0.25.
         half_kmesh_first_relax (bool, optional): Use more sparse k-mesh for initial relax. Defaults to True.
 
     Returns:
-        None: {output_path}/cstdn.py script written.
+        None: {output_dir}/cstdn.py script written.
     """
 
     cstdn_script = f"# Custodian double-relaxation script.\n\nvasp_cmd = {vasp_cmd}\n"
@@ -353,7 +353,7 @@ step2 = VaspJob(
 jobs = [step1, step2]
 c = Custodian(handlers, jobs, max_errors=3)
 c.run()"""
-    with open(f"{output_path}/cstdn.py", "w+") as f:
+    with open(f"{output_dir}/cstdn.py", "w+") as f:
         f.writelines(cstdn_script)
 
 
