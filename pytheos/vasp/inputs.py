@@ -1,5 +1,5 @@
 # For creating VASP input files and directories
-# Assumes KSPACING is used rather than a KPOINTS file (https://www.vasp.at/wiki/index.php/KSPACING)
+# Assumes KSPACING INCAR tag is used rather than a KPOINTS file (https://www.vasp.at/wiki/index.php/KSPACING)
 
 from ase import Atoms
 
