@@ -1,11 +1,12 @@
 # For creating VASP input files and directories
+# Assumes KSPACING is used rather than a KPOINTS file (https://www.vasp.at/wiki/index.php/KSPACING)
 
 from ase import Atoms
 
 
 def set_up_relaxation(
     struc: Atoms,
-    output_dir: str,
+    output_dir: str = "relaxation",
     user_incar_changes=None,
     functional="r2scan",
 ) -> None:
@@ -14,7 +15,7 @@ def set_up_relaxation(
 
     Args:
         struc (Atoms): structure to be relaxed
-        output_dir (str): relative path to output generated files. "relaxation" directory is made here.
+        output_dir (str): relative path to output generated files. Defaults to "relaxation".
         user_incar_changes (dict, optional): changes that deviate from default INCAR parameters given in pbe/r2scan.yaml files. Defaults to None.
         functional (str, optional): Exchange-Correlation (XC) functional to be used. Defaults to "r2scan".
 
@@ -23,7 +24,7 @@ def set_up_relaxation(
         ValueError: if an invalid functional is given
 
     Returns:
-        None: New directory is made for a VASP relaxation calculation @ {output_dir}/relaxation
+        None: New directory is made for a VASP relaxation calculation -> output_dir
     """
 
     import os
@@ -32,17 +33,23 @@ def set_up_relaxation(
     from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet
     from pymatgen.io.vasp.inputs import Kpoints
 
-    if os.path.exists(output_dir):
-        raise FileExistsError(output_dir)
-    else:
-        os.mkdir(output_dir)
+    print(f"\nSetting up VASP relaxation inputs...")
 
-    module_dir = os.path.dirname(__file__)
+    os.mkdir(output_dir)
+
+    # read in structure file as ASE Atoms object
     s = Structure.from_ase_atoms(struc)
 
+    print(f"-> structure = {s.composition.formula}")
+    print(f"-> output directory = {output_dir}")
+    print(f"-> user incar changes = {user_incar_changes}\n")
+
+    # get specific functional (xc.yaml) file for incar settings
+    module_dir = os.path.dirname(__file__)  # get path to module
     with open(f"{module_dir}/{functional}.yaml", "r") as f:
         incar_settings = yaml.load(f, Loader=yaml.SafeLoader)
 
+    # only make further changes if user gives them
     if bool(user_incar_changes) == True:
         incar_settings.update(user_incar_changes)
 
@@ -65,7 +72,7 @@ def set_up_relaxation(
             f"{functional} is not available. Choose either 'pbe' or 'r2scan'."
         )
 
-    calc.write_input(f"{output_dir}/relaxation")
+    calc.write_input(f"{output_dir}")
 
     return None
 
@@ -77,6 +84,8 @@ def set_up_dos(
 ) -> None:
     """
     Sets up VASP input files for a DOS calculation from a previous calculation (usually a relaxation calculation).
+
+    The source directory should ideally contain CHGCAR and WAVECAR files.
 
     Some DOS-specific changes are made to the INCAR by default from the source calculation ->
     - NELECT = NELECT - 1 + 0.999999 (https://www.vasp.at/forum/viewtopic.php?t=17981)
@@ -94,13 +103,19 @@ def set_up_dos(
         user_incar_changes (dict, optional): Additional changes to INCAR that can supply (ex. {"NCORE": 24}). Defaults to None.
 
     Returns:
-        None: New directory is made for a VASP DOS calculation @ {output_dir}
+        None: New directory is made for a VASP DOS calculation -> output_dir
     """
     import os
     from pymatgen.io.vasp.outputs import Eigenval, Vasprun
     from pymatgen.io.vasp.inputs import Incar
 
-    og_path = os.path.abspath(".")  # to get back to where this was originally called
+    print(f"\nSetting up VASP density of states inputs...")
+    print(f"-> source directory = {source_dir}")
+    print(f"-> output directory = {output_dir}")
+    print(f"-> user incar changes = {user_incar_changes}\n")
+
+    # to get back to where this was originally called
+    og_path = os.path.abspath(".")
 
     # make directory for DOS calculation
     os.mkdir(f"{output_dir}")
@@ -122,7 +137,7 @@ def set_up_dos(
     emax = efermi + 6
 
     os.chdir(f"{output_dir}")
-    os.system("mv CONTCAR POSCAR")  # to get final structure
+    os.system("mv CONTCAR POSCAR")  # to ensure final structure is used
 
     # read in previous incar + update with general DOS flags
     incar = Incar.from_file("INCAR")
@@ -133,13 +148,85 @@ def set_up_dos(
             "EMAX": emax,  # for more reasonable energy window
             "ISMEAR": -5,  # proper ISMEAR for DOS -> https://www.vasp.at/wiki/index.php/ISMEAR
             "NSW": 0,  # static calculation
-            "LCHARG": False,  # usually don't need this
-            "LWAVE": False,  # usually don't need this
-            "NEDOS": 501,  # for higher resolution DOS
+            "LCHARG": False,  # usually not needed
+            "LWAVE": False,  # usually not needed
+            "NEDOS": 501,  # higher resolution DOS
         }
     )
 
-    # only make further changes if user gives a dict
+    # only make further changes if user gives them
+    if bool(user_incar_changes) == True:
+        incar.update(user_incar_changes)
+
+    incar.write_file("INCAR")  # overwrite INCAR with new flags
+
+    # get back to original directory where this was called
+    os.chdir(og_path)
+
+    return None
+
+
+def set_up_bader(
+    source_dir: str = "relaxation",
+    output_dir: str = "bader",
+    user_incar_changes: dict = None,
+) -> None:
+    """
+    Sets up VASP input files for a Bader calculation from a previous calculation (usually a relaxation calculation).
+    - details on Bader charge analysis -> https://theory.cm.utexas.edu/henkelman/code/bader/
+
+    The source directory should ideally contain CHGCAR and WAVECAR files.
+
+    Some Bader-specific changes are made to the INCAR by default from the source calculation ->
+
+    - ISMEAR = 0 (Gaussian smearing)
+    - NSW = 0 (single ionic step)
+    - LAECHG = True (needed for Bader charge analysis - https://www.vasp.at/wiki/index.php/LAECHG)
+    - LCHARG = True (needed for Bader charge analysis)
+
+    Args:
+        source_dir (str, optional): Directory to source previous VASP files. Defaults to "relaxation".
+        output_dir (str, optional): Directory to output new VASP files for DBaderOS calculation. Defaults to "dos".
+        user_incar_changes (dict, optional): Additional changes to INCAR that can supply (ex. {"NCORE": 24}). Defaults to None.
+
+    Returns:
+        None: New directory is made for a VASP Bader calculation -> output_dir
+    """
+
+    import os
+    from pymatgen.io.vasp.inputs import Incar
+
+    print(f"\nSetting up VASP Bader charge inputs...")
+    print(f"-> source directory = {source_dir}")
+    print(f"-> output directory = {output_dir}")
+    print(f"-> user incar changes = {user_incar_changes}\n")
+
+    # to get back to where this was originally called
+    og_path = os.path.abspath(".")
+
+    # make directory for bader calculation
+    os.mkdir(f"{output_dir}")
+
+    # get necessary files from source calculation
+    os.system(
+        f"cp {source_dir}/INCAR {source_dir}/CONTCAR {source_dir}/POTCAR {source_dir}/CHGCAR {source_dir}/WAVECAR {output_dir}"
+    )
+
+    os.chdir(f"{output_dir}")
+    os.system("mv CONTCAR POSCAR")  # to ensure final structure is used
+
+    # read in previous incar + update with general DOS flags
+    incar = Incar.from_file("INCAR")
+    incar.update(
+        {
+            "ISMEAR": 0,  # Gaussian smearing
+            "NSW": 0,  # static calculation (important for VASP Bader -> https://theory.cm.utexas.edu/henkelman/code/bader/)
+            "LAECHG": True,  # needed for Bader charge analysis (https://www.vasp.at/wiki/index.php/LAECHG)
+            "LCHARG": True,  # needed for Bader charge analysis
+        }
+    )
+
+    # only make further changes if user gives them
     if bool(user_incar_changes) == True:
         incar.update(user_incar_changes)
 
@@ -156,7 +243,8 @@ def write_custodian_static(
     vasp_cmd: tuple = ("srun", "vasp_std"),
 ) -> None:
     """
-    Write a generic static script for calculation workflow and error handling using Custodian (https://github.com/materialsproject/custodian).
+    Write a generic static Custodian script for calculation workflow and error handling.
+    - https://github.com/materialsproject/custodian
 
     Args:
         output_path (str): relative path to write submission file
@@ -194,7 +282,14 @@ def write_custodian_doublerelax(
     half_kmesh_first_relax=True,
 ) -> None:
     """
-    Write a generic double relaxation script for calculation workflow and error handling using Custodian (https://github.com/materialsproject/custodian).
+    Write a generic double relaxation Custodian script for calculation workflow and error handling.
+    - https://github.com/materialsproject/custodian
+
+    Restricted to using the "KSPACING" INCAR flag as commonly used for high-throughput calculations
+    - KSPACING = 0.25 used as a reasonably safe default -> do you own convergence testing!!
+
+    Using half_kmesh_first_relax = True can be very beneficial to get closer to a structural minima at a drastically reduced cost.
+    - see discussion -> https://github.com/hackingmaterials/atomate/issues/19
 
     Args:
         output_path (str): relative path to write submission file
@@ -263,40 +358,6 @@ c.run()"""
 
 
 ###################### TODO #######################
-
-
-def make_bader_calc() -> None:
-    # move 02_dos into its own directory
-    os.mkdir("02_dos")
-    os.system("cp * 02_dos")
-    os.system("rm *")
-
-    # start on 03_bader dir
-    os.mkdir("03_bader")
-    os.chdir("03_bader")
-    os.system("cp ../02_dos/* .")
-    os.system("cp ../01_relax/CHGCAR ../01_relax/WAVECAR .")
-    os.system("cp ../../submitvasp .")
-    os.system(f"perl -pi -e 's/NUMBER/{atom_index_defect}/g' submitvasp")
-
-    os.system(f"perl -pi -e 's/ISMEAR.*/ISMEAR = 0/g' INCAR")
-    os.system(f"perl -pi -e 's/LAECHG.*/LAECHG = True/g' INCAR")
-    os.system(f"perl -pi -e 's/LCHARG.*/LCHARG = True/g' INCAR")
-
-    os.system(f"perl -pi -e 's/NELECT.*//g' INCAR")
-    os.system(f"perl -pi -e 's/NEDOS.*//g' INCAR")
-    os.system(f"perl -pi -e 's/EMIN.*//g' INCAR")
-    os.system(f"perl -pi -e 's/EMAX.*//g' INCAR")
-
-    os.system(
-        f"perl -pi -e 's/ALGO.*/ALGO = All/g' INCAR"
-    )  # since 02_dos is being run with ALGO = Normal
-    os.system(f"perl -pi -e 's/NSW.*/NSW = 0/g' INCAR")
-    os.system(f"perl -pi -e 's/KPAR.*/KPAR = 1/g' INCAR")  # one node
-    os.system(f"perl -pi -e 's/NCORE.*/NCORE = 24/g' INCAR")  # standard cores
-    os.system(f"perl -pi -e 's/TIME.*/TIME = 0.4/g' INCAR")
-
-    os.system("rm OUTCAR")
 
 
 # TODO just copied in for now from the perovskite HEO project - still needs to be fixed
