@@ -1,6 +1,8 @@
 # for extracting data and performing computations using the Materials Project database
 # https://next-gen.materialsproject.org
 
+# TODO add in chemical potential overlap extraction and computation
+
 
 def calc_mp2020compat_energy(run: Vasprun) -> float:
     """

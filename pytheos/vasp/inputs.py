@@ -3,24 +3,27 @@
 from ase import Atoms
 
 
-def write_relax_inputs(
+def set_up_relaxation(
     struc: Atoms,
     output_dir: str,
     user_incar_changes=None,
     functional="r2scan",
 ) -> None:
     """
-    Makes VASP input files (INCAR, KPOINTS, POSCAR, POTCAR) using Pymatgen for a relaxation calculation
+    Sets up VASP input files for a relaxation calculation from a structure as an ASE Atoms object.
 
     Args:
         struc (Atoms): structure to be relaxed
-        output_dir (str): relative path to output generated files
-        user_incar_changes (dict, optional): changes that deviate from default INCAR parameters given in *.yaml files. Defaults to None.
-        functional (str, optional): XC functional to be used. Defaults to "r2scan".
+        output_dir (str): relative path to output generated files. "relaxation" directory is made here.
+        user_incar_changes (dict, optional): changes that deviate from default INCAR parameters given in pbe/r2scan.yaml files. Defaults to None.
+        functional (str, optional): Exchange-Correlation (XC) functional to be used. Defaults to "r2scan".
 
     Raises:
         FileExistsError: if output_dir already exists
         ValueError: if an invalid functional is given
+
+    Returns:
+        None: New directory is made for a VASP relaxation calculation @ {output_dir}/relaxation
     """
 
     import os
@@ -34,52 +37,135 @@ def write_relax_inputs(
     else:
         os.mkdir(output_dir)
 
-    print(f"Writing VASP input files to {output_dir}")
-
     module_dir = os.path.dirname(__file__)
     s = Structure.from_ase_atoms(struc)
 
     with open(f"{module_dir}/{functional}.yaml", "r") as f:
         incar_settings = yaml.load(f, Loader=yaml.SafeLoader)
 
-    if bool(user_incar_changes) != False:
+    if bool(user_incar_changes) == True:
         incar_settings.update(user_incar_changes)
 
-    if functional == "r2scan":
-        calc = MPScanRelaxSet(
-            structure=s,
-            user_incar_settings=incar_settings,
-            user_potcar_functional="PBE_54",
-            sort_structure=True,
-        )
-    elif functional == "pbe":
+    if functional == "pbe":
         calc = MPRelaxSet(
             structure=s,
             user_incar_settings=incar_settings,
             user_potcar_functional="PBE",
             sort_structure=True,
         )
+    elif functional == "r2scan":
+        calc = MPScanRelaxSet(
+            structure=s,
+            user_incar_settings=incar_settings,
+            user_potcar_functional="PBE_54",
+            sort_structure=True,
+        )
     else:
-        raise ValueError(f"{functional} is not available.")
+        raise ValueError(
+            f"{functional} is not available. Choose either 'pbe' or 'r2scan'."
+        )
 
-    calc.write_input(f"{output_dir}")
+    calc.write_input(f"{output_dir}/relaxation")
+
+    return None
 
 
-def write_custodian_doublerelax(
-    output_path: str, kspacing=0.25, half_kmesh_first_relax=True
+def set_up_dos(
+    source_dir: str = "relaxation",
+    output_dir: str = "dos",
+    user_incar_changes: dict = None,
 ) -> None:
     """
-    Write a generic double relaxation script for calculation workflow and error handling using Custodian (https://github.com/materialsproject/custodian).
+    Sets up VASP input files for a DOS calculation from a previous calculation (usually a relaxation calculation).
+
+    Some DOS-specific changes are made to the INCAR by default from the source calculation ->
+    - NELECT = NELECT - 1 + 0.999999 (https://www.vasp.at/forum/viewtopic.php?t=17981)
+    - EMIN = EFERMI - 8 (more reasonable energy window)
+    - EMAX = EFERMI + 6 (more reasonable energy window)
+    - ISMEAR = -5 (tetrahedron method with Blöchl corrections)
+    - NSW = 0 (single ionic step)
+    - LCHARG = False (don't need usually)
+    - LWAVE = False (don't need usually)
+    - NEDOS = 501 (higher resolution DOS sampling)
+
+    Args:
+        source_dir (str, optional): Directory to source previous VASP files. Defaults to "relaxation".
+        output_dir (str, optional): Directory to output new VASP files for DOS calculation. Defaults to "dos".
+        user_incar_changes (dict, optional): Additional changes to INCAR that can supply (ex. {"NCORE": 24}). Defaults to None.
+
+    Returns:
+        None: New directory is made for a VASP DOS calculation @ {output_dir}
+    """
+    import os
+    from pymatgen.io.vasp.outputs import Eigenval, Vasprun
+    from pymatgen.io.vasp.inputs import Incar
+
+    og_path = os.path.abspath(".")  # to get back to where this was originally called
+
+    # make directory for DOS calculation
+    os.mkdir(f"{output_dir}")
+
+    # get necessary files from source calculation
+    os.system(
+        f"cp {source_dir}/INCAR {source_dir}/CONTCAR {source_dir}/POTCAR {source_dir}/CHGCAR {source_dir}/WAVECAR {output_dir}"
+    )
+
+    # due to issue with fermi level placement
+    e = Eigenval(f"{source_dir}/EIGENVAL")
+    num_elec = e.nelect
+    new_num_elec = num_elec - 1 + 0.999999
+
+    # for a more reasonable energy window
+    v = Vasprun(f"{source_dir}/vasprun.xml")
+    efermi = v.efermi
+    emin = efermi - 8
+    emax = efermi + 6
+
+    os.chdir(f"{output_dir}")
+    os.system("mv CONTCAR POSCAR")  # to get final structure
+
+    # read in previous incar + update with general DOS flags
+    incar = Incar.from_file("INCAR")
+    incar.update(
+        {
+            "NELECT": new_num_elec,  # per https://www.vasp.at/forum/viewtopic.php?t=17981
+            "EMIN": emin,  # for more reasonable energy window
+            "EMAX": emax,  # for more reasonable energy window
+            "ISMEAR": -5,  # proper ISMEAR for DOS -> https://www.vasp.at/wiki/index.php/ISMEAR
+            "NSW": 0,  # static calculation
+            "LCHARG": False,  # usually don't need this
+            "LWAVE": False,  # usually don't need this
+            "NEDOS": 501,  # for higher resolution DOS
+        }
+    )
+
+    # only make further changes if user gives a dict
+    if bool(user_incar_changes) == True:
+        incar.update(user_incar_changes)
+
+    incar.write_file("INCAR")  # overwrite INCAR with new flags
+
+    # get back to original directory where this was called
+    os.chdir(og_path)
+
+    return None
+
+
+def write_custodian_static(
+    output_path: str,
+    vasp_cmd: tuple = ("srun", "vasp_std"),
+) -> None:
+    """
+    Write a generic static script for calculation workflow and error handling using Custodian (https://github.com/materialsproject/custodian).
 
     Args:
         output_path (str): relative path to write submission file
-        kspacing (float, optional): K-point mesh spacing with VASP KSPACING tag (https://www.vasp.at/wiki/index.php/KSPACING). Defaults to 0.25.
-        half_kmesh_first_relax (bool, optional): Use more sparse k-mesh for initial relax. Defaults to True.
+
+    Returns:
+        None: {output_path}/cstdn.py script written.
     """
-    if half_kmesh_first_relax == True:
-        cstdn_script = f"""kspacing_initial = {kspacing*2}\nkspacing = {kspacing}\n\n"""
-    else:
-        cstdn_script = f"""kspacing_initial = {kspacing}\nkspacing = {kspacing}\n\n"""
+
+    cstdn_script = f"# Custodian static script.\n\nvasp_cmd = {vasp_cmd}\n"
 
     cstdn_script += """import os
 from custodian.custodian import Custodian
@@ -90,7 +176,54 @@ subset = list(VaspErrorHandler.error_msgs.keys())
 handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
 
 step1 = VaspJob(
-    vasp_cmd=["srun", "vasp_std"],
+    vasp_cmd=vasp_cmd,
+    final=True,
+)
+
+jobs = [step1]
+c = Custodian(handlers, jobs, max_errors=3)
+c.run()"""
+    with open(f"{output_path}/cstdn.py", "w+") as f:
+        f.writelines(cstdn_script)
+
+
+def write_custodian_doublerelax(
+    output_path: str,
+    vasp_cmd: tuple = ("srun", "vasp_std"),
+    kspacing=0.25,
+    half_kmesh_first_relax=True,
+) -> None:
+    """
+    Write a generic double relaxation script for calculation workflow and error handling using Custodian (https://github.com/materialsproject/custodian).
+
+    Args:
+        output_path (str): relative path to write submission file
+        kspacing (float, optional): K-point mesh spacing with VASP KSPACING tag (https://www.vasp.at/wiki/index.php/KSPACING). Defaults to 0.25.
+        half_kmesh_first_relax (bool, optional): Use more sparse k-mesh for initial relax. Defaults to True.
+
+    Returns:
+        None: {output_path}/cstdn.py script written.
+    """
+
+    cstdn_script = f"# Custodian double-relaxation script.\n\nvasp_cmd = {vasp_cmd}\n"
+
+    if half_kmesh_first_relax == True:
+        cstdn_script += (
+            f"""kspacing_initial = {kspacing*2}\nkspacing = {kspacing}\n\n"""
+        )
+    else:
+        cstdn_script += f"""kspacing_initial = {kspacing}\nkspacing = {kspacing}\n\n"""
+
+    cstdn_script += """import os
+from custodian.custodian import Custodian
+from custodian.vasp.handlers import VaspErrorHandler
+from custodian.vasp.jobs import VaspJob
+
+subset = list(VaspErrorHandler.error_msgs.keys())
+handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
+
+step1 = VaspJob(
+    vasp_cmd=vasp_cmd,
     final=False,
     suffix=".1",
     settings_override=[
@@ -106,7 +239,7 @@ step1 = VaspJob(
 )
 
 step2 = VaspJob(
-    vasp_cmd=["srun", "vasp_std"],
+    vasp_cmd=vasp_cmd,
     final=True,
     settings_override=[
         {
@@ -126,56 +259,127 @@ jobs = [step1, step2]
 c = Custodian(handlers, jobs, max_errors=3)
 c.run()"""
     with open(f"{output_path}/cstdn.py", "w+") as f:
-        f.writelines(cstdn_script)def make_dos_calc() -> None:
+        f.writelines(cstdn_script)
+
+
+###################### TODO #######################
+
+
+def make_bader_calc() -> None:
+    # move 02_dos into its own directory
+    os.mkdir("02_dos")
+    os.system("cp * 02_dos")
+    os.system("rm *")
+
+    # start on 03_bader dir
+    os.mkdir("03_bader")
+    os.chdir("03_bader")
+    os.system("cp ../02_dos/* .")
+    os.system("cp ../01_relax/CHGCAR ../01_relax/WAVECAR .")
+    os.system("cp ../../submitvasp .")
+    os.system(f"perl -pi -e 's/NUMBER/{atom_index_defect}/g' submitvasp")
+
+    os.system(f"perl -pi -e 's/ISMEAR.*/ISMEAR = 0/g' INCAR")
+    os.system(f"perl -pi -e 's/LAECHG.*/LAECHG = True/g' INCAR")
+    os.system(f"perl -pi -e 's/LCHARG.*/LCHARG = True/g' INCAR")
+
+    os.system(f"perl -pi -e 's/NELECT.*//g' INCAR")
+    os.system(f"perl -pi -e 's/NEDOS.*//g' INCAR")
+    os.system(f"perl -pi -e 's/EMIN.*//g' INCAR")
+    os.system(f"perl -pi -e 's/EMAX.*//g' INCAR")
+
+    os.system(
+        f"perl -pi -e 's/ALGO.*/ALGO = All/g' INCAR"
+    )  # since 02_dos is being run with ALGO = Normal
+    os.system(f"perl -pi -e 's/NSW.*/NSW = 0/g' INCAR")
+    os.system(f"perl -pi -e 's/KPAR.*/KPAR = 1/g' INCAR")  # one node
+    os.system(f"perl -pi -e 's/NCORE.*/NCORE = 24/g' INCAR")  # standard cores
+    os.system(f"perl -pi -e 's/TIME.*/TIME = 0.4/g' INCAR")
+
+    os.system("rm OUTCAR")
+
+
+# TODO just copied in for now from the perovskite HEO project - still needs to be fixed
+def set_up_optical_calc(sigma=0.1) -> None:
     """
-    Moves all relaxation files to a new directory called '01_relax' and gets everything ready for a density of states (DOS) calculation.
+    For making a new directory for optical calculations (should be called in directory where "02_static" exists).
+    - NBANDS is doubled from the default value of 02_static calculation
 
-    Call in the same location as relaxation files.
-
-    Changes the NELECT value per https://www.vasp.at/forum/viewtopic.php?t=17981 -> NELECT - 1 + 0.999999
-    - ensures proper Fermi level placement
+    Args:
+        sigma (float, optional): Smearing parameter than is usually increased for optical calculations compared to relaxation. Defaults to 0.2.
     """
-
     import os
     from pymatgen.io.vasp.outputs import Eigenval, Vasprun
 
-    os.mkdir("01_relax")
-    os.system("mv * 01_relax")
+    print(f"-> Making optical directory...")
 
+    os.mkdir("04_optical")
     os.system(
-        "cp 01_relax/CONTCAR 01_relax/INCAR 01_relax/WAVECAR 01_relax/CHGCAR 01_relax/POTCAR 01_relax/submitvasp ."
+        f"cp 02_static/INCAR 02_static/POSCAR 02_static/KPOINTS 02_static/POTCAR 02_static/CHGCAR 02_static/WAVECAR 02_static/submitvasp ./04_optical"
     )
-    os.system("mv CONTCAR POSCAR")
+    os.chdir("04_optical")
 
-    # since not using custodian here usually
-    os.system("perl -pi -e 's/python cstdn.py/srun vasp_std/g' submitvasp")
+    e = Eigenval("../02_static/EIGENVAL")
 
-    # due to issue with fermi level placement (see https://www.vasp.at/forum/viewtopic.php?t=17981)
-    e = Eigenval("01_relax/EIGENVAL")
-    num_elec = e.nelect
-    new_num_elec = num_elec - 1 + 0.999999
-    os.system(f"echo NELECT = {new_num_elec} >> INCAR")
-    print(f"number of electrons: {num_elec} -> {new_num_elec}")
+    nbands = e.nbands
+    new_nbands = nbands * 2  # doubling NBANDS
+    os.system(f"echo NBANDS = {new_nbands} >> INCAR")
+    print(f"number of bands: {nbands} -> {new_nbands}")
 
-    # for a more reasonable energy window to sample over
-    v = Vasprun("01_relax/vasprun.xml")
-    efermi = v.efermi
-    print(f"fermi energy = {efermi} eV")
-    emin = efermi - 8
-    emax = efermi + 6
-    os.system(f"echo EMIN = {emin} >> INCAR")
-    os.system(f"echo EMAX = {emax} >> INCAR")
-
-    # change other VASP flags for DOS calculation
-    os.system("perl -pi -e 's/ISMEAR = 0/ISMEAR = -5/g' INCAR")
-    os.system("perl -pi -e 's/NSW = 250/NSW = 0/g' INCAR")
-    os.system("perl -pi -e 's/LCHARG = True/LCHARG = False/g' INCAR")
     os.system("perl -pi -e 's/LWAVE = True/LWAVE = False/g' INCAR")
-    os.system(
-        "perl -pi -e 's/ALGO.*/ALGO = Normal/g' INCAR"
-    )  # usually better for ISMEAR = -5
+    os.system("perl -pi -e 's/LCHARG = True/LCHARG = False/g' INCAR")
+    os.system(f"echo NEDOS = 20000 >> INCAR")  # for adequate sampling
+    os.system(f"perl -pi -e 's/SIGMA = 0.05/SIGMA = {sigma}/g' INCAR")
+    os.system("perl -pi -e 's/ALGO = All/ALGO = Normal/g' INCAR")
+    os.system("perl -pi -e 's/EDIFF = 1e-06/EDIFF = 1e-08/g' INCAR")
+    os.system("perl -pi -e 's/LREAL = Auto/LREAL = False/g' INCAR")
+    os.system(f"echo LOPTICS = True >> INCAR")
+    os.system(f"echo CSHIFT = 0.01 >> INCAR")
 
-    os.system(f"echo NEDOS = 501 >> INCAR")
+
+# TODO just copied in for now from the perovskite HEO project - still needs to be fixed
+def set_up_bandstructure_calc():
+    """For making a new directory for density of states calculations (should be called in directory where "02_static" exists)
+    - NBANDS is 1.5x from the default value of 02_static calculation
+
+    Additional, manual steps are required for this function still due to band structure process:
+        NOTE that this is for the 'regular' band structure calculations (i.e., not unfolding)
+        1. run 01_pbe calculation
+        2. get high-symmetry k-path with sumo (> sumo-kgen --hybrid --symprec 0.1 --pymatgen)
+        3. copy KPOINTS_band to KPOINTS
+        4. copy WAVECAR from finished 01_pbe calculation to the 'bandstructure' directory
+        5. now can run actual metaGGA band structure calculation
+    """
+
+    import os
+    from pymatgen.io.vasp.outputs import Eigenval
+
+    print(f"-> Making bandstructure directory...")
+
+    os.mkdir("05_bandstructure")
+    os.system(
+        f"cp 02_static/INCAR 02_static/IBZKPT 02_static/POSCAR 02_static/KPOINTS 02_static/POTCAR 02_static/CHGCAR 02_static/WAVECAR 02_static/submitvasp ./05_bandstructure"
+    )
+    os.chdir("05_bandstructure")
+
+    e = Eigenval("../02_static/EIGENVAL")
+
+    nbands = e.nbands
+    new_nbands = int(nbands * 1.5)  # increasing NBANDS by 1.5x
+    os.system(f"echo NBANDS = {new_nbands} >> INCAR")
+    print(f"number of bands: {nbands} -> {new_nbands}")
+
+    os.system("perl -pi -e 's/LCHARG = True/LCHARG = False/g' INCAR")
+    os.system(f"echo NEDOS = 5001 >> INCAR")  # for adequate sampling
+    os.system("perl -pi -e 's/LREAL = Auto/LREAL = False/g' INCAR")
+
+    os.mkdir("01_pbe")
+    os.system("cp * 01_pbe")
+    os.system("rm CHGCAR WAVECAR")
+    os.chdir("01_pbe")
+
+    os.system("perl -pi -e 's/METAGGA = R2scan/GGA = PE/g' INCAR")
+    os.system(f"echo ICHARG = 11 >> INCAR")
 
 
 # TODO need to ensure this is properly implemented
@@ -278,86 +482,3 @@ def get_magorder(calc_path: str, magorder_name: str, coordinate_rounding=0):
     )  # this replaces the "CHANGE" that we just added with the magnetic ordering for the corresponding POSCAR file
     os.system("rm MAGMOM.txt ")
     os.system(f"mv tmp_ORDER.txt {calc_path}/magorder")
-
-
-# TODO just copied in for now from the perovskite HEO project - still needs to be fixed
-def set_up_optical_calc(sigma=0.1) -> None:
-    """
-    For making a new directory for optical calculations (should be called in directory where "02_static" exists).
-    - NBANDS is doubled from the default value of 02_static calculation
-
-    Args:
-        sigma (float, optional): Smearing parameter than is usually increased for optical calculations compared to relaxation. Defaults to 0.2.
-    """
-    import os
-    from pymatgen.io.vasp.outputs import Eigenval, Vasprun
-
-    print(f"-> Making optical directory...")
-
-    os.mkdir("04_optical")
-    os.system(
-        f"cp 02_static/INCAR 02_static/POSCAR 02_static/KPOINTS 02_static/POTCAR 02_static/CHGCAR 02_static/WAVECAR 02_static/submitvasp ./04_optical"
-    )
-    os.chdir("04_optical")
-
-    e = Eigenval("../02_static/EIGENVAL")
-
-    nbands = e.nbands
-    new_nbands = nbands * 2  # doubling NBANDS
-    os.system(f"echo NBANDS = {new_nbands} >> INCAR")
-    print(f"number of bands: {nbands} -> {new_nbands}")
-
-    os.system("perl -pi -e 's/LWAVE = True/LWAVE = False/g' INCAR")
-    os.system("perl -pi -e 's/LCHARG = True/LCHARG = False/g' INCAR")
-    os.system(f"echo NEDOS = 20000 >> INCAR")  # for adequate sampling
-    os.system(f"perl -pi -e 's/SIGMA = 0.05/SIGMA = {sigma}/g' INCAR")
-    os.system("perl -pi -e 's/ALGO = All/ALGO = Normal/g' INCAR")
-    os.system("perl -pi -e 's/EDIFF = 1e-06/EDIFF = 1e-08/g' INCAR")
-    os.system("perl -pi -e 's/LREAL = Auto/LREAL = False/g' INCAR")
-    os.system(f"echo LOPTICS = True >> INCAR")
-    os.system(f"echo CSHIFT = 0.01 >> INCAR")
-
-
-# TODO just copied in for now from the perovskite HEO project - still needs to be fixed
-def set_up_bandstructure_calc():
-    """For making a new directory for density of states calculations (should be called in directory where "02_static" exists)
-    - NBANDS is 1.5x from the default value of 02_static calculation
-
-    Additional, manual steps are required for this function still due to band structure process:
-        NOTE that this is for the 'regular' band structure calculations (i.e., not unfolding)
-        1. run 01_pbe calculation
-        2. get high-symmetry k-path with sumo (> sumo-kgen --hybrid --symprec 0.1 --pymatgen)
-        3. copy KPOINTS_band to KPOINTS
-        4. copy WAVECAR from finished 01_pbe calculation to the 'bandstructure' directory
-        5. now can run actual metaGGA band structure calculation
-    """
-
-    import os
-    from pymatgen.io.vasp.outputs import Eigenval
-
-    print(f"-> Making bandstructure directory...")
-
-    os.mkdir("05_bandstructure")
-    os.system(
-        f"cp 02_static/INCAR 02_static/IBZKPT 02_static/POSCAR 02_static/KPOINTS 02_static/POTCAR 02_static/CHGCAR 02_static/WAVECAR 02_static/submitvasp ./05_bandstructure"
-    )
-    os.chdir("05_bandstructure")
-
-    e = Eigenval("../02_static/EIGENVAL")
-
-    nbands = e.nbands
-    new_nbands = int(nbands * 1.5)  # increasing NBANDS by 1.5x
-    os.system(f"echo NBANDS = {new_nbands} >> INCAR")
-    print(f"number of bands: {nbands} -> {new_nbands}")
-
-    os.system("perl -pi -e 's/LCHARG = True/LCHARG = False/g' INCAR")
-    os.system(f"echo NEDOS = 5001 >> INCAR")  # for adequate sampling
-    os.system("perl -pi -e 's/LREAL = Auto/LREAL = False/g' INCAR")
-
-    os.mkdir("01_pbe")
-    os.system("cp * 01_pbe")
-    os.system("rm CHGCAR WAVECAR")
-    os.chdir("01_pbe")
-
-    os.system("perl -pi -e 's/METAGGA = R2scan/GGA = PE/g' INCAR")
-    os.system(f"echo ICHARG = 11 >> INCAR")
