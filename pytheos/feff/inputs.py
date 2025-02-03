@@ -28,12 +28,19 @@ def write_xanes_inputs(
     import os
     import yaml
 
-    print(f"Writing FEFF XANES input files to {output_dir}")
+    print(f"\nSetting up FEFF XANES inputs...")
 
     if os.path.exists(output_dir):
         raise FileExistsError(output_dir)
 
     struc = Structure.from_ase_atoms(structure)
+
+    print(f"-> structure = {struc.composition.formula}")
+    print(
+        f"-> absorbing atom = #{absorbing_atom}-{struc[absorbing_atom].species.reduced_formula}"
+    )
+    print(f"-> output directory = {output_dir}")
+    print(f"-> user xanes changes = {user_xanes_changes}\n")
 
     # read in default cards from 'xanes_card.yaml' file
     module_dir = os.path.dirname(__file__)
@@ -52,7 +59,7 @@ def write_xanes_inputs(
     inputs.write_input(output_dir=output_dir)
 
 
-def write_feff_custodian_script(
+def write_custodian_script(
     feff_cmd: str,
     output_dir: str = ".",
     max_errors=3,
