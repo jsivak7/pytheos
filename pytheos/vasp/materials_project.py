@@ -2,6 +2,7 @@
 # https://next-gen.materialsproject.org
 
 # TODO add in chemical potential overlap extraction and computation
+# TODO add in general database extraction for materials disvoery exploration
 
 
 def calc_mp2020compat_energy(run: Vasprun) -> float:
@@ -39,7 +40,7 @@ def calc_form_decomp_energy(
     struc: Atoms,
     energy: float,
     MPApiKey: str,
-    xc: str = "GGA_GGA+U",
+    xc: str = "R2SCAN",
 ) -> tuple:
     """
     Calculates the formation and decomposition energies using the Materials Project database.
@@ -54,7 +55,7 @@ def calc_form_decomp_energy(
         struc (Atoms): ASE Atoms object for structure.
         energy (float): Total energy in eV from VASP calculation.
         MPApiKey (str): Materials Project API Key (https://next-gen.materialsproject.org/api) - user specific.
-        xc (str, optional): Exchange-Correlation functional used in calculation. Options -> ["GGA_GGA+U", "R2SCAN", "GGA_GGA+U_R2SCAN"] per https://github.com/materialsproject/emmet/blob/main/emmet-core/emmet/core/thermo.py. Defaults to "GGA_GGA+U".
+        xc (str, optional): Exchange-Correlation functional used in calculation. Options -> ["GGA_GGA+U", "R2SCAN", "GGA_GGA+U_R2SCAN"] per https://github.com/materialsproject/emmet/blob/main/emmet-core/emmet/core/thermo.py. Defaults to "R2SCAN".
 
     Returns:
         tuple: (formation energy in eV/atom, decomposition energy in eV/atom, decomposition reaction entries)
