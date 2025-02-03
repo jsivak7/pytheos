@@ -81,7 +81,7 @@ def calc_form_decomp_energy(
     energy_per_atom: float,
     MPApiKey: str,
     xc: str = "GGA_GGA+U",
-) -> dict:
+) -> tuple:
     """
     Calculates the formation and decomposition energies using the Materials Project database.
     - see C.J. Bartel et al. Npj Comput Mater 5 (2019) 4. https://doi.org/10.1038/s41524-018-0143-2 for more details on computation
@@ -98,10 +98,7 @@ def calc_form_decomp_energy(
         xc (str, optional): Exchange-Correlation functional used in calculation. Options -> ["GGA_GGA+U", "R2SCAN", "GGA_GGA+U_R2SCAN"] per https://github.com/materialsproject/emmet/blob/main/emmet-core/emmet/core/thermo.py. Defaults to "GGA_GGA+U".
 
     Returns:
-        dict: A dictionary with the following keys and values:
-        - "form_energy": formation energy in eV/atom
-        - "decomp_energy": decomposition energy in eV/atom
-        - "decomp_rxn": decomposition reaction
+        tuple: (formation energy in eV/atom, decomposition energy in eV/atom, decomposition reaction entries)
     """
 
     from pymatgen.core import Structure
@@ -147,11 +144,7 @@ def calc_form_decomp_energy(
             e_decomp = phasediagram.get_decomp_and_phase_separation_energy(e)[1]
             decomp_entries = phasediagram.get_decomp_and_phase_separation_energy(e)[0]
 
-    return {
-        "form_energy": e_form,
-        "decomp_energy": e_decomp,
-        "decomp_entries": decomp_entries,
-    }
+    return (e_form, e_decomp, decomp_entries)
 
 
 def cleanup_decomp_rxn(decomp_entries: dict) -> str:
