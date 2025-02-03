@@ -78,7 +78,7 @@ def calc_mp2020compat_energy(run: Vasprun) -> float:
 
 def calc_form_decomp_energy(
     struc: Atoms,
-    energy_per_atom: float,
+    energy: float,
     MPApiKey: str,
     xc: str = "GGA_GGA+U",
 ) -> tuple:
@@ -93,7 +93,7 @@ def calc_form_decomp_energy(
 
     Args:
         struc (Atoms): ASE Atoms object for structure.
-        energy_per_atom (float): Total energy in eV/atom from VASP calculation.
+        energy (float): Total energy in eV from VASP calculation.
         MPApiKey (str): Materials Project API Key (https://next-gen.materialsproject.org/api) - user specific.
         xc (str, optional): Exchange-Correlation functional used in calculation. Options -> ["GGA_GGA+U", "R2SCAN", "GGA_GGA+U_R2SCAN"] per https://github.com/materialsproject/emmet/blob/main/emmet-core/emmet/core/thermo.py. Defaults to "GGA_GGA+U".
 
@@ -114,7 +114,7 @@ def calc_form_decomp_energy(
     # for our system of interest
     target_entry = phase_diagram.PDEntry(
         composition=chemical_formula,
-        energy=energy_per_atom,
+        energy=energy,
         name="target",  # need some unique name for identification purposes
     )
 
