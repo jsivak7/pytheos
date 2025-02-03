@@ -107,9 +107,7 @@ def calc_form_decomp_energy(
     from emmet.core.thermo import ThermoType
 
     struc = Structure.from_ase_atoms(struc)
-    chemical_formula = (
-        struc.composition.formula
-    )  # NOTE might need to correct this, TODO
+    chemical_formula = struc.composition.formula
 
     # for our system of interest
     target_entry = phase_diagram.PDEntry(

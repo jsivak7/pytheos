@@ -17,7 +17,6 @@ def read_structure_to_ase_atoms(file_path: str) -> Atoms:
     from ase import io
 
     s = io.read(f"{file_path}")
-    print(f"{file_path} read in as ASE Atoms object")
     return s
 
 
@@ -47,7 +46,6 @@ def write_structure_from_ase_atoms(
         raise FileExistsError(file_path)
 
     if sort == True:
-        print("Sorting structure by electronegativity.")
         from pymatgen.core import Structure
 
         struc_pmg = Structure.from_ase_atoms(struc)
@@ -55,7 +53,6 @@ def write_structure_from_ase_atoms(
         struc = struc_pmg.to_ase_atoms()
 
     io.write(f"{file_path}", struc, direct=True)
-    print(f"ASE Atoms written to {file_path}")
 
 
 def rattle_atoms(struc: Atoms, stddev=0.02) -> Atoms:
