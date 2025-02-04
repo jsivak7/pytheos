@@ -106,7 +106,8 @@ def set_up_dos(
         None: New directory is made for a VASP DOS calculation -> output_dir
     """
     import os
-    from pymatgen.io.vasp.outputs import Eigenval, Vasprun
+    from pytheos.vasp.outputs import load_vasprun
+    from pymatgen.io.vasp.outputs import Eigenval
     from pymatgen.io.vasp.inputs import Incar
 
     print(f"\nSetting up VASP density of states inputs...")
@@ -116,6 +117,12 @@ def set_up_dos(
 
     # to get back to where this was originally called
     og_path = os.path.abspath(".")
+
+    # load vasprun.xml (also performs a check for sufficient convergence)
+    v = load_vasprun(
+        path=f"{source_dir}/vasprun.xml",
+        parse_dos_eigen=True,
+    )
 
     # make directory for DOS calculation
     os.mkdir(f"{output_dir}")
@@ -131,7 +138,6 @@ def set_up_dos(
     new_num_elec = num_elec - 1 + 0.999999
 
     # for a more reasonable energy window
-    v = Vasprun(f"{source_dir}/vasprun.xml")
     efermi = v.efermi
     emin = efermi - 8
     emax = efermi + 6
@@ -194,6 +200,7 @@ def set_up_bader(
     """
 
     import os
+    from pytheos.vasp.outputs import load_vasprun
     from pymatgen.io.vasp.inputs import Incar
 
     print(f"\nSetting up VASP Bader charge inputs...")
@@ -203,6 +210,12 @@ def set_up_bader(
 
     # to get back to where this was originally called
     og_path = os.path.abspath(".")
+
+    # load vasprun.xml (also performs a check for sufficient convergence)
+    v = load_vasprun(
+        path=f"{source_dir}/vasprun.xml",
+        parse_dos_eigen=False,
+    )
 
     # make directory for bader calculation
     os.mkdir(f"{output_dir}")
