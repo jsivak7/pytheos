@@ -4,6 +4,9 @@
 # TODO add in chemical potential overlap extraction and computation
 # TODO add in general database extraction for materials disvoery exploration
 
+from pymatgen.io.vasp.outputs import Vasprun
+from ase import Atoms
+
 
 def calc_mp2020compat_energy(run: Vasprun) -> float:
     """
