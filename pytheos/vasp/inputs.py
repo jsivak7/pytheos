@@ -92,6 +92,7 @@ def set_up_dos(
     - EMIN = EFERMI - 8 (more reasonable energy window)
     - EMAX = EFERMI + 6 (more reasonable energy window)
     - ISMEAR = -5 (tetrahedron method with Blöchl corrections)
+    - ALGO = Normal (since ISMEAR = -5 can often fail with ALGO = All)
     - NSW = 0 (single ionic step)
     - LCHARG = False (don't need usually)
     - LWAVE = False (don't need usually)
@@ -153,6 +154,7 @@ def set_up_dos(
             "EMIN": emin,  # for more reasonable energy window
             "EMAX": emax,  # for more reasonable energy window
             "ISMEAR": -5,  # proper ISMEAR for DOS -> https://www.vasp.at/wiki/index.php/ISMEAR
+            "ALGO": "Normal", # since ALGO = All can often fail with ISMEAR = -5
             "NSW": 0,  # static calculation
             "LCHARG": False,  # usually not needed
             "LWAVE": False,  # usually not needed
