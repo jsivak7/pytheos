@@ -52,7 +52,7 @@ def get_firstNN_bonds(
     num_NNs: int,
     radius=3.00,
     anion="O",
-) -> list:
+) -> tuple:
     """
     Gets all first nearest neighbor (NN) bond lengths for a specified cation with surrounding anions within a structure.
 
@@ -70,7 +70,7 @@ def get_firstNN_bonds(
         ValueError: If implemented self-consistent scheme still cannot find correct number of NNs.
 
     Returns:
-        list: 1D list of first NN bond lengths
+        tuple: (1D list bondlengths, 1D list anion indices corresponding to bond lengths)
     """
 
     from pymatgen.core.structure import Structure
@@ -104,41 +104,28 @@ def get_firstNN_bonds(
 
             # attempt finds less than desired number of NNs -> increase search radius by shift value
             if len(indices) < num_NNs:
-                indices = []
-                distances = []
                 radius += shift
-                print(f"radius = {np.round(radius, 6)} Å")
-                current_atom_neighbors = struc.get_all_neighbors_py(r=radius)[atom_num]
-
-                for nn in current_atom_neighbors:
-                    if nn.species == Composition(anion):  # only want anion since 1st NN
-                        indices.append(nn.index)
-                        distances.append(nn.nn_distance)
-                print("\t--> {} NNs".format(len(indices)))
-
-                # only do the allowed amount of trials at each radius before making smaller
-                if counter >= max_counter:
-                    # progressively make |shift| smaller for finer resolution
-                    shift = shift * 0.05
 
             # attempt finds more than desired number of NNs -> decrease search radius by shift value
             elif len(indices) > num_NNs:
-                indices = []
-                distances = []
                 radius -= shift
-                print(f"radius = {np.round(radius, 6)} Å")
-                current_atom_neighbors = struc.get_all_neighbors_py(r=radius)[atom_num]
 
-                for nn in current_atom_neighbors:
-                    if nn.species == Composition(anion):  # only want anion since 1st NN
-                        indices.append(nn.index)
-                        distances.append(nn.nn_distance)
-                print("\t--> {} NNs".format(len(indices)))
+            indices = []
+            distances = []
 
-                # only do the allowed amount of trials at each radius before making smaller
-                if counter >= max_counter:
-                    # progressively make |shift| smaller for finer resolution
-                    shift = shift * 0.05
+            print(f"radius = {np.round(radius, 6)} Å")
+            current_atom_neighbors = struc.get_all_neighbors_py(r=radius)[atom_num]
+
+            for nn in current_atom_neighbors:
+                if nn.species == Composition(anion):  # only want anion since 1st NN
+                    indices.append(nn.index)
+                    distances.append(nn.nn_distance)
+            print("\t--> {} NNs".format(len(indices)))
+
+            # only do the allowed amount of trials at each radius before making smaller
+            if counter >= max_counter:
+                # progressively make |shift| smaller for finer resolution
+                shift = shift * 0.05
 
         # fail safe for if the implemented scheme still does not work to due to large deviations expected coordination
         if len(indices) != num_NNs:
@@ -151,7 +138,7 @@ def get_firstNN_bonds(
     else:  # should be anion - printing for clarity
         print("Current atom is an anion ({})!".format(anion))
 
-    return distances
+    return (distances, indices)
 
 
 # TODO NEEDS TO BE FIXED I THINK - CAREFUL USING YET
