@@ -58,7 +58,7 @@ def calc_form_decomp_energy(
         struc (Atoms): ASE Atoms object for structure.
         energy (float): Total energy in eV from VASP calculation.
         MPApiKey (str): Materials Project API Key (https://next-gen.materialsproject.org/api) - user specific.
-        xc (str, optional): Exchange-Correlation functional used in calculation. Options -> ["GGA_GGA+U", "R2SCAN", "GGA_GGA+U_R2SCAN"] per https://github.com/materialsproject/emmet/blob/main/emmet-core/emmet/core/thermo.py. Defaults to "R2SCAN".
+        xc (str, optional): Exchange-Correlation functional used in calculation. Options -> ["GGA_GGA_U", "R2SCAN", "GGA_GGA_U_R2SCAN"] per https://github.com/materialsproject/emmet/blob/main/emmet-core/emmet/core/thermo.py. Defaults to "R2SCAN".
 
     Returns:
         tuple: (formation energy in eV/atom, decomposition energy in eV/atom, decomposition reaction entries)
