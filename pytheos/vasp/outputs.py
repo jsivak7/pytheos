@@ -152,7 +152,7 @@ def bader_convert_ACF_dat_to_csv() -> None:
     """
     Converts the ACF.dat output file from VASP Bader charge analysis to a .csv file with the name ACF.csv
     - https://theory.cm.utexas.edu/henkelman/code/bader/
-    - NOTE: call in the same location as relaxation files.
+    - NOTE: call in the same location as VASP output files.
     """
 
     import os

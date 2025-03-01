@@ -1,4 +1,4 @@
-# General utilities
+# general structure utilities
 
 from ase import Atoms
 from pymatgen.core import Structure
