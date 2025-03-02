@@ -2,3 +2,4 @@
 - [ ] add in how to extract different materials and their properties from MP
 - [ ] write examples of how modules function for others to use
 - [ ] get stuff set up for database creation
+- [ ] add in chemical potential overlap extraction and computation

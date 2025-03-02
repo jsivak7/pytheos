@@ -1,8 +1,6 @@
 # for extracting data and performing computations using the Materials Project database
-# https://next-gen.materialsproject.org
+# see https://next-gen.materialsproject.org
 
-# TODO add in chemical potential overlap extraction and computation
-# TODO add in general database extraction for materials disvoery exploration
 
 from pymatgen.io.vasp.outputs import Vasprun
 from ase import Atoms
