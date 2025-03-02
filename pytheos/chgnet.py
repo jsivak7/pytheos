@@ -1,4 +1,5 @@
-# for running CHGNet simulations
+# module to facilitate Crystal Hamiltonian Graph Neural Network (CHGNet) simulations
+# see OG publication --> Deng, B. et al. Nat Mach Intell 5, 1031–1041 (2023). https://doi.org/10.1038/s42256-023-00716-3
 
 from ase import Atoms
 
