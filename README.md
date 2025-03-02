@@ -8,7 +8,8 @@ Central location of python tools for high-entropy oxides (pytheos) that I have u
 git clone https://github.com/jsivak7/pytheos
 cd pytheos 
 ```
-2. Install the package (the `-e` is optional for installing in editable mode).
+2. Install the package.
+- `-e` is for installing in editable mode (optional, but recommended).
 ```
 pip install -e .
 ```
