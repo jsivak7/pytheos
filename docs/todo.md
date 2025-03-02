@@ -3,3 +3,5 @@
 - [ ] add in how to extract different materials and their properties from MP
 - [ ] write examples for others to use easier
 - [ ] get stuff set up for database creation in MongoDB
+- [ ] write tests
+- [ ] fine tuning of MLIPs
