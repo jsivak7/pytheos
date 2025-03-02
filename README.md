@@ -19,4 +19,4 @@ TODO
 
 
 ## Development & Bugs
-In case you run into any issues please let me know or open an issue - this package is under active development. Thank you for any suggestions/contributions, I hope that this is useful to your work as well!
+In case you run into any issues please let me know - this package is under active development. Thank you for any suggestions/contributions, I hope that this is useful to your work!
