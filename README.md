@@ -1,6 +1,6 @@
 # pytheos
 
-Central location of python tools for high-entropy oxides (pytheos) that I have used and developed over my PhD to assist in studying chemically disordered crystalline materials with computational methods.
+Central location of python tools for high-entropy oxides (pytheos) that I have developed over my PhD to assist in studying chemically disordered crystalline materials with computational methods.
 
 ## Installation
 1. Clone the repo.
