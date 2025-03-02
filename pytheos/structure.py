@@ -4,7 +4,7 @@ from ase import Atoms
 from pymatgen.core import Structure
 
 
-def read_structure_to_ase_atoms(file_path: str) -> Atoms:
+def read_to_ase_atoms(file_path: str) -> Atoms:
     """
     Read in structure file to ASE Atoms Object
 
@@ -20,7 +20,7 @@ def read_structure_to_ase_atoms(file_path: str) -> Atoms:
     return s
 
 
-def write_structure_from_ase_atoms(
+def write_from_ase_atoms(
     struc: Atoms,
     file_path: str,
     overwrite=False,
