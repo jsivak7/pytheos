@@ -111,7 +111,7 @@ def set_up_dos(
         None: New directory is made for a VASP DOS calculation -> output_dir
     """
     import os
-    from pytheos.vasp.outputs import load_vasprun
+    from pytheos.vasp import load_vasprun
     from pymatgen.io.vasp.outputs import Eigenval
     from pymatgen.io.vasp.inputs import Incar
 
