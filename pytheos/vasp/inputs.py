@@ -420,6 +420,7 @@ def get_afm_magorder(
     s = utils.convert_ase_atoms_to_pmg_structure(struc)
 
     magmoms = []
+    counts = {"up": 0, "down": 0}
 
     atom_index = 0
     for atom in s:
@@ -451,12 +452,14 @@ def get_afm_magorder(
                 if np.array_equal(position, spin_up_position):
                     identified_position = True
                     spin_label = "spin up"
+                    counts["up"] += 1
                     magmom = +magmom
 
             for spin_down_position in spin_down_positions:
                 if np.array_equal(position, spin_down_position):
                     identified_position = True
                     spin_label = "spin down"
+                    counts["down"] += 1
                     magmom = -magmom
 
             if identified_position == False:
@@ -470,7 +473,16 @@ def get_afm_magorder(
         )
         atom_index += 1
 
-    return magmoms
+    if counts["up"] != counts["down"]:
+        question = input(
+            "WARNING! The number of atoms identified as spin-up and spin-down are not the same - do you want to proceed? (y/n)\n"
+        )
+        if question.lower() in ["yes", "y"]:
+            return magmoms
+        else:
+            print("ABORTING!")
+    else:
+        return magmoms
 
 
 def update_incar_with_magorder(path: str, magmom_list: list) -> None:
