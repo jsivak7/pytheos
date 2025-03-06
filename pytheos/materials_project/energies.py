@@ -1,4 +1,4 @@
-# for extracting data and performing computations using the Materials Project database
+# for energy computations using the Materials Project database
 # see https://next-gen.materialsproject.org
 
 

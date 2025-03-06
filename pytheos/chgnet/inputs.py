@@ -1,4 +1,4 @@
-# module to facilitate Crystal Hamiltonian Graph Neural Network (CHGNet) simulations
+# module to facilitate Crystal Hamiltonian Graph Neural Network (CHGNet) simulation inputs
 # see OG publication --> Deng, B. et al. Nat Mach Intell 5, 1031–1041 (2023). https://doi.org/10.1038/s42256-023-00716-3
 
 from ase import Atoms
@@ -8,7 +8,6 @@ def run_relax(
     structure: Atoms,
     max_force=0.050,
     optimizer="FIRE",
-    # TODO can you run constrained relaxations (i.e. like ISIF = 8 in VASP?)
 ):
     """
     For running CHGNet relaxation at 0K for an inputted ASE Atoms object

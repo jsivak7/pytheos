@@ -1,11 +1,11 @@
-# module to facilitate Vienna Ab initio Simulation Package (VASP) calculations
+# module to facilitate Vienna Ab initio Simulation Package (VASP) calculation inputs
 # see https://www.vasp.at/wiki/index.php/The_VASP_Manual
-# NOTE that it is assumed that the KSPACING incar tag is used rather than a KPOINTS file
+
+# NOTE that it is assumed here that the KSPACING INCAR tag is used rather than a KPOINTS file
 # --> see https://www.vasp.at/wiki/index.php/KSPACING
 
 from ase import Atoms
-from pymatgen.io.vasp import Vasprun
-from pandas import DataFrame
+from pymatgen.io.vasp.inputs import Incar
 
 
 def set_up_relaxation(
@@ -21,7 +21,7 @@ def set_up_relaxation(
         struc (Atoms): structure to be relaxed
         output_dir (str): relative path to output generated files. Defaults to "relaxation".
         user_incar_changes (dict, optional): changes that deviate from default INCAR parameters given in pbe/r2scan.yaml files. Defaults to None.
-        functional (str, optional): Exchange-Correlation (XC) functional to be used. Defaults to "r2scan".
+        functional (str, optional): Exchange-Correlation (XC) functional to be used. Defaults to "r2scan". Options can be found in /pytheos/vasp/inputs_sets/.
 
     Raises:
         FileExistsError: if output_dir already exists
@@ -37,34 +37,30 @@ def set_up_relaxation(
     from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet
     from pymatgen.io.vasp.inputs import Kpoints
 
-    print(f"\nSetting up VASP relaxation inputs...")
+    print(f"----- Setting up VASP relaxation -----")
 
     os.mkdir(output_dir)
 
     # read in structure file as ASE Atoms object
     s = Structure.from_ase_atoms(struc)
 
-    print(f"-> structure = {s.composition.formula}")
-    print(f"-> output directory = {output_dir}")
-    print(f"-> user incar changes = {user_incar_changes}\n")
-
     # get specific functional (xc.yaml) file for incar settings
     module_dir = os.path.dirname(__file__)  # get path to module
-    with open(f"{module_dir}/vasp_sets/{functional}.yaml", "r") as f:
+    with open(f"{module_dir}/input_sets/{functional}.yaml", "r") as f:
         incar_settings = yaml.load(f, Loader=yaml.SafeLoader)
 
     # only make further changes if user gives them
     if bool(user_incar_changes) == True:
         incar_settings.update(user_incar_changes)
 
-    if functional == "pbe":
+    if functional in ["pbe", "pbesol"]:
         calc = MPRelaxSet(
             structure=s,
             user_incar_settings=incar_settings,
             user_potcar_functional="PBE",
             sort_structure=True,
         )
-    elif functional == "r2scan":
+    elif functional in ["r2scan", "scan"]:
         calc = MPScanRelaxSet(
             structure=s,
             user_incar_settings=incar_settings,
@@ -73,7 +69,7 @@ def set_up_relaxation(
         )
     else:
         raise ValueError(
-            f"{functional} is not available. Choose either 'pbe' or 'r2scan'."
+            f"{functional} is not available. Choose either a GGA ('pbe', 'pbesol') or a MetaGGA ('r2scan', 'scan')."
         )
 
     calc.write_input(f"{output_dir}")
@@ -115,10 +111,7 @@ def set_up_dos(
     from pymatgen.io.vasp.outputs import Eigenval
     from pymatgen.io.vasp.inputs import Incar
 
-    print(f"\nSetting up VASP density of states inputs...")
-    print(f"-> source directory = {source_dir}")
-    print(f"-> output directory = {output_dir}")
-    print(f"-> user incar changes = {user_incar_changes}\n")
+    print(f"----- Setting up VASP density of states -----")
 
     # to get back to where this was originally called
     og_path = os.path.abspath(".")
@@ -209,10 +202,7 @@ def set_up_bader(
     from pytheos.vasp.outputs import load_vasprun
     from pymatgen.io.vasp.inputs import Incar
 
-    print(f"\nSetting up VASP Bader charge inputs...")
-    print(f"-> source directory = {source_dir}")
-    print(f"-> output directory = {output_dir}")
-    print(f"-> user incar changes = {user_incar_changes}\n")
+    print(f"----- Setting up VASP Bader charge -----")
 
     # to get back to where this was originally called
     og_path = os.path.abspath(".")
@@ -272,6 +262,8 @@ def write_custodian_static(
         None: {output_dir}/cstdn.py script written.
     """
 
+    print(f"----- Writing static Custodian script -----")
+
     cstdn_script = f"# Custodian static script.\n\nvasp_cmd = {vasp_cmd}\n"
 
     cstdn_script += """import os
@@ -318,6 +310,8 @@ def write_custodian_doublerelax(
     Returns:
         None: {output_dir}/cstdn.py script written.
     """
+
+    print(f"----- Writing double-relax Custodian script -----")
 
     cstdn_script = f"# Custodian double-relaxation script.\n\nvasp_cmd = {vasp_cmd}\n"
 
@@ -376,178 +370,212 @@ c.run()"""
         f.writelines(cstdn_script)
 
 
-def load_vasprun(
-    path: str = "vasprun.xml",
-    parse_dos_eigen: bool = False,
-) -> Vasprun:
+def get_afm_magorder(
+    struc: Atoms,
+    magorder_name: str,
+    magmom_values: dict,
+    rattle_amount: float = 0,
+    round_coords: int = 0,
+) -> list:
     """
-    Loads vasprun.xml file for further analyses. This is a very powerful class that can be used to get most common data from VASP calculations.
-    - https://github.com/materialsproject/pymatgen/blob/master/src/pymatgen/io/vasp/outputs.py
+    Gets the magnetic ordering for an arbitrary structure.
+
+    NOTE that a *.yaml file must exist for the given magorder_name arguement in pytheos/vasp/afm_orders/
+
+    Magnetic moments can be "rattled" some amount (arg: rattle_amount) around the specified magnetic moment (arg: magmom_values).
+    This can be beneficial to break the initial magnetic symmetry and assists in electronic convergence.
+    - random value between magmom_value +/- rattle_amount
 
     Args:
-        path (str, optional): Relative path for *.xml file. Defaults to "vasprun.xml".
-        parse_dos_eigen (bool, optional): Option to parse DOS and Eigenvalues. Can save significant time if not interested in those data.. Defaults to False.
+        struc (Atoms): inputted structure
+        magorder_name (str): magnetic ordering name to apply to structure
+        magmom_values (dict): magnetic moment values (in Bohr-Magneton) for different elements. Example -> {"Ni": 3, "O": 0}
+        rattle_amount (float, optional): amount to distort initial magnetic moment. Defaults to 0.
+        round_coords (int, optional): number of decimals to round atom positions - sometimes helpful for distorted structures. Defaults to 0.
 
     Raises:
-        ValueError: If sufficient convergence has not been achieved.
+        ValueError: If atom position cannot be identified as spin-up or spin-down.
 
     Returns:
-        Vasprun: Pymatgen.io.vasp.Vasprun object
+        list: Initial magnetic moment values to be passed to VASP input set
     """
 
-    from pymatgen.io.vasp import Vasprun
+    from pytheos.structure import utils
+    import numpy as np
+    import os
+    import yaml
+    import random
 
-    v = Vasprun(filename=path)
+    print(f"----- Getting AFM magnetic ordering -----")
 
-    # to ensure that calculation has reached convergence
-    if v.converged == False:
+    # load afm_order.yaml per "magorder_name" argument
+    module_path = os.path.dirname(__file__)
+    with open(f"{module_path}/afm_orders/{magorder_name}.yaml", "r") as f:
+        spins = yaml.load(f, Loader=yaml.SafeLoader)
 
-        # to give the user some more specifics
-        if v.converged_ionic == False:
-            print("Ionic convergence has not been achieved!")
-        if v.converged_electronic == False:
-            print("Electronic convergence has not been achieved!")
+    # split up spin up and spin down positions
+    spin_up_positions = np.round(np.array(spins["spin_up"]), round_coords)
+    spin_down_positions = np.round(np.array(spins["spin_down"]), round_coords)
 
-        # don't allow object to be returned since not sufficiently converged.
-        raise ValueError(
-            f"VASP calculation has not converged ({path}). See specifics above."
+    s = utils.convert_ase_atoms_to_pmg_structure(struc)
+
+    magmoms = []
+
+    atom_index = 0
+    for atom in s:
+        spin_label = None
+        rounded_coords = np.round(atom.coords, round_coords)
+
+        try:
+            magmom_values[atom.label]
+        except KeyError:
+            print(f"{atom.label} not found in magmom_values dictionary.")
+
+        magmom_value = magmom_values[atom.label]
+        magmom = np.round(
+            random.uniform(
+                magmom_value - rattle_amount,
+                magmom_value + rattle_amount,
+            ),
+            2,
         )
 
-    return v
+        if atom.label == "O":
+            spin_label = None  # only care about cations
+
+        else:  # cations
+            position = np.round(atom.coords, round_coords)
+            identified_position = False
+
+            for spin_up_position in spin_up_positions:
+                if np.array_equal(position, spin_up_position):
+                    identified_position = True
+                    spin_label = "spin up"
+                    magmom = +magmom
+
+            for spin_down_position in spin_down_positions:
+                if np.array_equal(position, spin_down_position):
+                    identified_position = True
+                    spin_label = "spin down"
+                    magmom = -magmom
+
+            if identified_position == False:
+                raise ValueError(
+                    f"Spin not properly identified for atom #{atom_index} ({atom.label}) @ {rounded_coords}"
+                )
+
+        magmoms.append(magmom)
+        print(
+            f"#{atom_index} \t{atom.label} \t{rounded_coords} \t-> {spin_label} \t{magmom}"
+        )
+        atom_index += 1
+
+    return magmoms
 
 
-def bader_convert_ACF_dat_to_csv() -> None:
+def update_incar_with_magorder(path: str, magmom_list: list) -> None:
     """
-    Converts the ACF.dat output file from VASP Bader charge analysis to a .csv file with the name ACF.csv
-    - https://theory.cm.utexas.edu/henkelman/code/bader/
-    - NOTE: call in the same location as VASP output files.
-    """
-
-    import os
-
-    os.system("cp ACF.dat ACF.csv")
-
-    os.system("perl -pi -e 's/    /,/g' ACF.csv")  # four spaces
-    os.system("perl -pi -e 's/   /,/g' ACF.csv")  # three spaces
-    os.system("perl -pi -e 's/  /,/g' ACF.csv")  # two spaces
-    os.system("perl -pi -e 's/ /,/g' ACF.csv")  # one space
-
-    os.system("perl -pi -e 's/-//g' ACF.csv")  # dashes removed
-
-    os.system("perl -pi -e 's/,,,/,/g' ACF.csv")
-    os.system("perl -pi -e 's/,,/,/g' ACF.csv")
-
-    os.system("sed -i 's/^.\{1\}//g' ACF.csv")
-
-    os.system("perl -pi -e 's/#/ATOM_NUM/g' ACF.csv")
-
-    os.system("perl -pi -e 's/MIN,DIST/MIN_DIST/g' ACF.csv")
-    os.system("perl -pi -e 's/ATOMIC,VOL/ATOMIC_VOL/g' ACF.csv")
-
-    os.system("perl -pi -e 's/VACUUM.*//g' ACF.csv")  # ending removed
-    os.system("perl -pi -e 's/NUMBER.*//g' ACF.csv")  # ending removed
-
-    os.system("sed -i '/^$/d' ACF.csv")  # remove all blank lines
-
-
-def extract_optical_data(run="vasprun.xml", anisotropic=False) -> DataFrame:
-    """
-    Uses Sumo (https://github.com/SMTG-Bham/sumo) to extract dielectric function from VASP calculation
-    and then converts it to the real part of the refractive index.
-
-    This is currently for calculations that have been run with LOPTICS = True
-    - default sumo output is a .dat file, but this function converts it to a .csv file
-    - also gets energy to wavelength conversion
-    - NOTE needs to be run in directory where VASP loptics calculation was run
-
-    Extracts the following properties:
-        - absorption
-        - loss
-        - eps_real
-        - eps_imag
-        - n_real
-        - n_imag
+    Updates INCAR file with new MAGMOM magnetic ordering.
 
     Args:
-        - run (str, optional): relative location for vasprun.xml file. Defaults to "vasprun.xml".
-            - default = './vasprun.xml'
-        - anisotropic (bool)
+        path (str): relative path to INCAR file.
+        magmom_list (list): magnetic moments that will update MAGMOM in INCAR file
 
     Returns:
-        Pandas DataFrame with optical data
+        None
+    """
+    from pymatgen.io.vasp.inputs import Incar
+
+    print(f"----- Updating INCAR with magnetic ordering -----")
+
+    i = Incar.from_file(filename=path)
+    i["MAGMOM"] = magmom_list
+    i.write_file(filename=path)
+
+    return None
+
+
+# TODO just copied in for now from the perovskite HEO project - still needs to be fixed
+def set_up_optical_calc(sigma=0.1) -> None:
+    """
+    For making a new directory for optical calculations (should be called in directory where "02_static" exists).
+    - NBANDS is doubled from the default value of 02_static calculation
+
+    Args:
+        sigma (float, optional): Smearing parameter than is usually increased for optical calculations compared to relaxation. Defaults to 0.2.
+    """
+    import os
+    from pymatgen.io.vasp.outputs import Eigenval, Vasprun
+
+    print(f"-> Making optical directory...")
+
+    os.mkdir("04_optical")
+    os.system(
+        f"cp 02_static/INCAR 02_static/POSCAR 02_static/KPOINTS 02_static/POTCAR 02_static/CHGCAR 02_static/WAVECAR 02_static/submitvasp ./04_optical"
+    )
+    os.chdir("04_optical")
+
+    e = Eigenval("../02_static/EIGENVAL")
+
+    nbands = e.nbands
+    new_nbands = nbands * 2  # doubling NBANDS
+    os.system(f"echo NBANDS = {new_nbands} >> INCAR")
+    print(f"number of bands: {nbands} -> {new_nbands}")
+
+    os.system("perl -pi -e 's/LWAVE = True/LWAVE = False/g' INCAR")
+    os.system("perl -pi -e 's/LCHARG = True/LCHARG = False/g' INCAR")
+    os.system(f"echo NEDOS = 20000 >> INCAR")  # for adequate sampling
+    os.system(f"perl -pi -e 's/SIGMA = 0.05/SIGMA = {sigma}/g' INCAR")
+    os.system("perl -pi -e 's/ALGO = All/ALGO = Normal/g' INCAR")
+    os.system("perl -pi -e 's/EDIFF = 1e-06/EDIFF = 1e-08/g' INCAR")
+    os.system("perl -pi -e 's/LREAL = Auto/LREAL = False/g' INCAR")
+    os.system(f"echo LOPTICS = True >> INCAR")
+    os.system(f"echo CSHIFT = 0.01 >> INCAR")
+
+
+####################################
+
+
+# TODO just copied in for now from the perovskite HEO project - still needs to be fixed
+def set_up_bandstructure_calc():
+    """For making a new directory for density of states calculations (should be called in directory where "02_static" exists)
+    - NBANDS is 1.5x from the default value of 02_static calculation
+
+    Additional, manual steps are required for this function still due to band structure process:
+        NOTE that this is for the 'regular' band structure calculations (i.e., not unfolding)
+        1. run 01_pbe calculation
+        2. get high-symmetry k-path with sumo (> sumo-kgen --hybrid --symprec 0.1 --pymatgen)
+        3. copy KPOINTS_band to KPOINTS
+        4. copy WAVECAR from finished 01_pbe calculation to the 'bandstructure' directory
+        5. now can run actual metaGGA band structure calculation
     """
 
     import os
-    import pandas as pd
+    from pymatgen.io.vasp.outputs import Eigenval
 
-    properties = [
-        "absorption",  # optical absorption
-        "loss",  # energy-loss function -Im(1/eps)
-        "eps_real",  # real part of dielectric function
-        "eps_imag",  # imaginary part of dielectric function
-        "n_real",  # real part of refractive index
-        "n_imag",  # imaginary part of refractive index
-    ]
+    print(f"-> Making bandstructure directory...")
 
-    data_all = {}  # will be populated
+    os.mkdir("05_bandstructure")
+    os.system(
+        f"cp 02_static/INCAR 02_static/IBZKPT 02_static/POSCAR 02_static/KPOINTS 02_static/POTCAR 02_static/CHGCAR 02_static/WAVECAR 02_static/submitvasp ./05_bandstructure"
+    )
+    os.chdir("05_bandstructure")
 
-    print("\nStarting Optical Property Extraction...")
+    e = Eigenval("../02_static/EIGENVAL")
 
-    if anisotropic == True:
-        print("**anisotropic**")
+    nbands = e.nbands
+    new_nbands = int(nbands * 1.5)  # increasing NBANDS by 1.5x
+    os.system(f"echo NBANDS = {new_nbands} >> INCAR")
+    print(f"number of bands: {nbands} -> {new_nbands}")
 
-    for property in properties:
-        print("--> {}".format(property))
+    os.system("perl -pi -e 's/LCHARG = True/LCHARG = False/g' INCAR")
+    os.system(f"echo NEDOS = 5001 >> INCAR")  # for adequate sampling
+    os.system("perl -pi -e 's/LREAL = Auto/LREAL = False/g' INCAR")
 
-        if anisotropic == True:
-            os.system(
-                "sumo-optplot {} --anisotropic --filenames {}".format(property, run)
-            )
-        else:
-            os.system("sumo-optplot {} --filenames {}".format(property, run))
+    os.mkdir("01_pbe")
+    os.system("cp * 01_pbe")
+    os.system("rm CHGCAR WAVECAR")
+    os.chdir("01_pbe")
 
-        # cleaning up .dat file to .csv
-        os.system("perl -pi -e 's/# //g' {}.dat".format(property))
-        os.system("perl -pi -e 's/ /,/g' {}.dat".format(property))
-
-        # change 'alpha' to actual property (unsure of why always defaults to alpha in sumo)
-        os.system("perl -pi -e 's/alpha/{}/g' {}.dat".format(property, property))
-        os.system("mv {}.dat {}.csv".format(property, property))
-
-        # dont want all of these since plotting myself (for some reason always defaults to absorption.pdf in sumo)
-        os.system("rm absorption.pdf")
-
-        # getting energy in wavelength (nm) and making new column in .csv file
-        data = pd.read_csv("./{}.csv".format(property))
-
-        # convert energy to joules
-        energy_joules = data["energy(eV)"] * 1.602176634e-19
-
-        # calculate wavelength from energy
-        wavelength = (6.626e-34 * 2.998e8) / energy_joules
-        wavelength = wavelength * (1e9)  # convert to nm
-
-        data["wavelength(nm)"] = wavelength
-        # data = data[[col for col in data.columns if col != property] + [property]] # move property column to the end of the dataframe
-        data.to_csv("{}.csv".format(property), index=False)
-
-        # collect all data
-        df = pd.read_csv("{}.csv".format(property))
-
-        if property == "absorption":  # so that we only get energy and wavelength once
-            data_all["energy_eV"] = df["energy(eV)"]
-            data_all["wavelength_nm"] = df["wavelength(nm)"]
-
-        if anisotropic == True:
-            data_all["{}_xx".format(property)] = df["{}_xx".format(property)]
-            data_all["{}_yy".format(property)] = df["{}_yy".format(property)]
-            data_all["{}_zz".format(property)] = df["{}_zz".format(property)]
-        else:
-            data_all[property] = df[property]
-
-        # get rid of all of the individual data files
-        os.system("rm {}.csv".format(property))
-
-    df_final = pd.DataFrame().from_dict(data_all)
-
-    return df_final
+    os.system("perl -pi -e 's/METAGGA = R2scan/GGA = PE/g' INCAR")
+    os.system(f"echo ICHARG = 11 >> INCAR")

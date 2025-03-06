@@ -1,5 +1,5 @@
 # assumes a orthorhombic perovskite lattice parameters of a=5.3720488599999996,b=5.4627964899999997,c=7.6363596200000003 (CaTiO3 from MP)
-# values collected for up to 2x1x1 supercell
+# spin positions collected for up to 2x1x1 supercell
 
 parent_structure: >
   Ca4 Ti4 O12

@@ -1,5 +1,5 @@
 # assumes a cubic perovskite lattice parameter of 3.9127013100000005 Angstroms (SrTiO3 from MP)
-# values collected for up to 2x2x2 supercell
+# spin positions collected for up to 2x2x2 supercell
 
 parent_structure: >
   Sr1 Ti1 O3
@@ -15,17 +15,17 @@ parent_structure: >
     0.5000000000000000    0.0000000000000000    0.5000000000000000 O2-
     0.5000000000000000    0.5000000000000000    0.0000000000000000 O2-
     0.0000000000000000    0.5000000000000000    0.5000000000000000 O2-
-    
+
 spin_up: [
   [2, 2, 2],
-  [2, 6, 6],
-  [6, 2, 6],
+  [2, 6, 2],
+  [6, 2, 2],
   [6, 6, 2],
   ]
 
 spin_down: [
   [2, 2, 6],
-  [2, 6, 2],
-  [6, 2, 2],
+  [2, 6, 6],
+  [6, 2, 6],
   [6, 6, 6],
         ]
