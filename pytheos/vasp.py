@@ -50,7 +50,7 @@ def set_up_relaxation(
 
     # get specific functional (xc.yaml) file for incar settings
     module_dir = os.path.dirname(__file__)  # get path to module
-    with open(f"{module_dir}/{functional}.yaml", "r") as f:
+    with open(f"{module_dir}/vasp_sets/{functional}.yaml", "r") as f:
         incar_settings = yaml.load(f, Loader=yaml.SafeLoader)
 
     # only make further changes if user gives them

@@ -26,7 +26,7 @@ def calc_mp2020compat_energy(run: Vasprun) -> float:
     v = run.get_computed_entry()
 
     # get original energy in eV/atom
-    energy_og = v.energy / len(v.structure)
+    energy_og = v.energy / len(v.structxure)
     print(f"\noriginal energy = {np.round(energy_og, 4)}/atom")
 
     # calculate corrected energy with MP2020Compatibility corrections
