@@ -371,7 +371,7 @@ c.run()"""
 
 
 def get_afm_magorder(
-    struc: Atoms,
+    struc_path: str,
     magorder_name: str,
     magmom_values: dict,
     rattle_amount: float = 0,
@@ -387,7 +387,7 @@ def get_afm_magorder(
     - random value between magmom_value +/- rattle_amount
 
     Args:
-        struc (Atoms): inputted structure
+        struc_path (str): relative path to structure file
         magorder_name (str): magnetic ordering name to apply to structure
         magmom_values (dict): magnetic moment values (in Bohr-Magneton) for different elements. Example -> {"Ni": 3, "O": 0}
         rattle_amount (float, optional): amount to distort initial magnetic moment. Defaults to 0.
@@ -417,7 +417,8 @@ def get_afm_magorder(
     spin_up_positions = np.round(np.array(spins["spin_up"]), round_coords)
     spin_down_positions = np.round(np.array(spins["spin_down"]), round_coords)
 
-    s = utils.convert_ase_atoms_to_pmg_structure(struc)
+    s = utils.read_to_ase_atoms(file_path=struc_path)
+    s = utils.convert_ase_atoms_to_pmg_structure(s)
 
     magmoms = []
     counts = {"up": 0, "down": 0}
@@ -469,7 +470,7 @@ def get_afm_magorder(
 
         magmoms.append(magmom)
         print(
-            f"#{atom_index} \t{atom.label} \t{rounded_coords} \t-> {spin_label} \t{magmom}"
+            f"#{atom_index} \t{atom.label} \t{rounded_coords} -> {spin_label} {magmom}"
         )
         atom_index += 1
 
