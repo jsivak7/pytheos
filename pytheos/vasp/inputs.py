@@ -370,7 +370,7 @@ c.run()"""
         f.writelines(cstdn_script)
 
 
-def get_afm_magorder(
+def get_magorder(
     struc_path: str,
     magorder_name: str,
     magmom_values: dict,
@@ -380,7 +380,7 @@ def get_afm_magorder(
     """
     Gets the magnetic ordering for an arbitrary structure.
 
-    NOTE that a *.yaml file must exist for the given magorder_name arguement in pytheos/vasp/afm_orders/
+    NOTE that a *.yaml file must exist for the given magorder_name arguement in pytheos/vasp/mag_orders/
 
     Magnetic moments can be "rattled" some amount (arg: rattle_amount) around the specified magnetic moment (arg: magmom_values).
     This can be beneficial to break the initial magnetic symmetry and assists in electronic convergence.
@@ -410,7 +410,7 @@ def get_afm_magorder(
 
     # load afm_order.yaml per "magorder_name" argument
     module_path = os.path.dirname(__file__)
-    with open(f"{module_path}/afm_orders/{magorder_name}.yaml", "r") as f:
+    with open(f"{module_path}/mag_orders/{magorder_name}.yaml", "r") as f:
         spins = yaml.load(f, Loader=yaml.SafeLoader)
 
     # split up spin up and spin down positions
@@ -470,7 +470,7 @@ def get_afm_magorder(
 
         magmoms.append(magmom)
         print(
-            f"#{atom_index} \t{atom.label} \t{rounded_coords} -> {spin_label} {magmom}"
+            f"#{atom_index:<4} {atom.label:<4} {str(rounded_coords):<20}  -> {str(spin_label):<12} {str(magmom):<4}"
         )
         atom_index += 1
 
