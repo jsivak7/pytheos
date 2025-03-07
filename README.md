@@ -15,7 +15,7 @@ pip install -e .
 ```
 
 ## Example Notebooks
-[Generate Special Quasi-random Structures](https://github.com/jsivak7/pytheos/blob/main/examples/generate_SQSs.ipynb)
+[Generating Special Quasi-random Structures](https://github.com/jsivak7/pytheos/blob/main/examples/generate_SQSs.ipynb)
 
 
 ## Development & Bugs
