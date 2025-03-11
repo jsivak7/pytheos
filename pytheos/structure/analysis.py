@@ -4,6 +4,43 @@ from ase import Atoms
 from pymatgen.core import Structure
 
 
+def get_space_group(
+    struc: Atoms,
+    symprec: float = 0.01,
+    angle_tolerance: float = 5.0,
+) -> tuple:
+    """
+    Get space group symbol and international space group symbol for inputted structure.
+
+    The Pymatgen defaults are used as defaults here as well.
+
+    Args:
+        struc (Atoms): structure to get space group
+        symprec (float, optional): Tolerance for symmetry search. Defaults to 0.01.
+        angle_tolerance (float, optional): Angle tolerance for symmetry search. Defaults to 5.0.
+
+    Returns:
+        tuple: (space group symbol, international space group number)
+    """
+    from pymatgen.core import Structure
+    from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+
+    struc = Structure.from_ase_atoms(struc)
+    symbol = SpacegroupAnalyzer(
+        structure=struc,
+        symprec=symprec,
+        angle_tolerance=angle_tolerance,
+    ).get_space_group_symbol()
+
+    number = SpacegroupAnalyzer(
+        structure=struc,
+        symprec=symprec,
+        angle_tolerance=angle_tolerance,
+    ).get_space_group_number()
+
+    return (symbol, number)
+
+
 def get_diffraction_pattern(struc: Atoms, scaled=True) -> dict:
     """
     Get simulated diffraction pattern for a structure file using Pymatgen
