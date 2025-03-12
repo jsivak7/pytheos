@@ -236,6 +236,8 @@ def set_up_bandstructure(
     os.system("cp * forWAVECAR")
     os.system("rm CHGCAR WAVECAR")
 
+    os.chdir("forWAVECAR")
+
     # read in previous incar + update flags
     incar = Incar.from_file("INCAR")
     incar.update(
