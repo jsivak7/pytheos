@@ -245,11 +245,11 @@ def set_up_bandstructure(
         {
             "ISMEAR": 0,
             "LCHARG": False,  # not needed
-            "METAGGA": "",  # need PBE WAVECAR
             "GGA": "PE",  # for PBE WAVECAR
             "ICHARG": 11,  # NSCF calculation -> https://www.vasp.at/wiki/index.php/ICHARG
         }
     )
+    incar.remove({"METAGGA"})  # remove METAGGA flag
     incar.write_file("INCAR")  # overwrite INCAR with new flags
 
     # get back to original directory where this was called
