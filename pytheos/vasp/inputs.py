@@ -249,7 +249,7 @@ def set_up_bandstructure(
             "ICHARG": 11,  # NSCF calculation -> https://www.vasp.at/wiki/index.php/ICHARG
         }
     )
-    incar.remove({"METAGGA"})  # remove METAGGA flag
+    incar.as_dict().pop("METAGGA")
     incar.write_file("INCAR")  # overwrite INCAR with new flags
 
     # get back to original directory where this was called
