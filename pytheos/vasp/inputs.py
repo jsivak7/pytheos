@@ -206,7 +206,7 @@ def set_up_bandstructure(
     os.chdir(f"{output_dir}")
     os.system("mv CONTCAR POSCAR")  # to ensure final structure is used
 
-    nbands = Eigenval("../02_static/EIGENVAL").nbands
+    nbands = Eigenval(f"{source_dir}/EIGENVAL").nbands
     new_nbands = int(nbands * increase_nbands)  # increasing NBANDS by increase_nbands
 
     # read in previous incar + update with general BS flags
