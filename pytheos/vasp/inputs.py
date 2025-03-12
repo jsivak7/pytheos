@@ -175,7 +175,8 @@ def set_up_bandstructure(
     source_dir: str = "relaxation",
     output_dir: str = "bandstructure",
     user_incar_changes: dict = None,
-    increase_nbands: float = 1.5,
+    increase_nbands: float = 2,
+    sumo_kgen_cmd: str = "sumo-kgen --hybrid --pymatgen --symprec 0.1",
 ):
 
     import os
@@ -214,7 +215,7 @@ def set_up_bandstructure(
     incar.update(
         {
             "NBANDS": new_nbands,
-            "ISMEAR": -5,  # TESTING
+            "ISMEAR": 0,  # needed for BS calculation
             "NEDOS": 2001,  # for adequate sampling
             "NSW": 0,  # static calculation
             "LCHARG": False,  # not needed
@@ -236,6 +237,10 @@ def set_up_bandstructure(
     os.system("cp * forWAVECAR")
     os.system("rm CHGCAR WAVECAR")
 
+    # get KPOINTS_band file
+    os.system(sumo_kgen_cmd)
+    os.system("cp KPOINTS_band KPOINTS")
+
     os.chdir("forWAVECAR")
     os.system("rm IBZKPT")
 
@@ -249,7 +254,7 @@ def set_up_bandstructure(
             "ICHARG": 11,  # NSCF calculation -> https://www.vasp.at/wiki/index.php/ICHARG
         }
     )
-    incar.pop("METAGGA")
+    incar.pop("METAGGA")  # running PBE for WAVECAR
     incar.write_file("INCAR")  # overwrite INCAR with new flags
 
     # get back to original directory where this was called
