@@ -37,7 +37,7 @@ def set_up_relaxation(
     from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet
     from pymatgen.io.vasp.inputs import Kpoints
 
-    print(f"----- Setting up VASP relaxation -----")
+    print(f"----- Setting up VASP relaxation calculation -----")
 
     os.mkdir(output_dir)
 
@@ -107,11 +107,11 @@ def set_up_dos(
         None: New directory is made for a VASP DOS calculation -> output_dir
     """
     import os
-    from pytheos.vasp import load_vasprun
+    from pytheos.vasp.outputs import load_vasprun
     from pymatgen.io.vasp.outputs import Eigenval
     from pymatgen.io.vasp.inputs import Incar
 
-    print(f"----- Setting up VASP density of states -----")
+    print(f"----- Setting up VASP density of states calculation -----")
 
     # to get back to where this was originally called
     og_path = os.path.abspath(".")
@@ -202,7 +202,7 @@ def set_up_bader(
     from pytheos.vasp.outputs import load_vasprun
     from pymatgen.io.vasp.inputs import Incar
 
-    print(f"----- Setting up VASP Bader charge -----")
+    print(f"----- Setting up VASP Bader charge calculation -----")
 
     # to get back to where this was originally called
     og_path = os.path.abspath(".")
@@ -247,127 +247,117 @@ def set_up_bader(
     return None
 
 
-def write_custodian_static(
-    output_dir: str,
-    vasp_cmd: tuple = ("srun", "vasp_std"),
-) -> None:
-    """
-    Write a generic static Custodian script for calculation workflow and error handling.
-    - https://github.com/materialsproject/custodian
+# NOTE this has not gone through as rigorous use/testing as other functions - USE WITH CARE!
+def set_up_dielectric(  # this is IPA only!
+    source_dir: str = "relaxation",
+    output_dir: str = "dielectric",
+    user_incar_changes: dict = None,
+):
 
-    Args:
-        output_dir (str): relative path to write submission file.
+    import os
+    from pytheos.vasp.outputs import load_vasprun
+    from pymatgen.io.vasp.outputs import Eigenval
+    from pymatgen.io.vasp.inputs import Incar
 
-    Returns:
-        None: {output_dir}/cstdn.py script written.
-    """
+    print(f"----- Setting up VASP dielectric calculation -----")
 
-    print(f"----- Writing static Custodian script -----")
+    # to get back to where this was originally called
+    og_path = os.path.abspath(".")
 
-    cstdn_script = f"# Custodian static script.\n\nvasp_cmd = {vasp_cmd}\n"
+    # load vasprun.xml to check for sufficient convergence
+    v = load_vasprun(
+        path=f"{source_dir}/vasprun.xml",
+        parse_dos_eigen=False,
+    )
 
-    cstdn_script += """import os
-from custodian.custodian import Custodian
-from custodian.vasp.handlers import VaspErrorHandler
-from custodian.vasp.jobs import VaspJob
+    # load EIGENVAL file to double the number of bands
+    e = Eigenval(filename=f"{source_dir}/EIGENVAL")
+    nbands = e.nbands
+    new_nbands = nbands * 2
 
-subset = list(VaspErrorHandler.error_msgs.keys())
-handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
+    # make directory for dielectric calculation
+    os.mkdir(f"{output_dir}")
 
-step1 = VaspJob(
-    vasp_cmd=vasp_cmd,
-    final=True,
-)
+    # get necessary files from source calculation
+    os.system(
+        f"cp {source_dir}/INCAR {source_dir}/CONTCAR {source_dir}/POTCAR {source_dir}/CHGCAR {source_dir}/WAVECAR {output_dir}"
+    )
 
-jobs = [step1]
-c = Custodian(handlers, jobs, max_errors=3)
-c.run()"""
-    with open(f"{output_dir}/cstdn.py", "w+") as f:
-        f.writelines(cstdn_script)
+    os.chdir(f"{output_dir}")
+    os.system("mv CONTCAR POSCAR")  # to ensure final structure is used
 
-
-def write_custodian_doublerelax(
-    output_dir: str,
-    vasp_cmd: tuple = ("srun", "vasp_std"),
-    kspacing=0.25,
-    half_kmesh_first_relax=True,
-) -> None:
-    """
-    Write a generic double relaxation Custodian script for calculation workflow and error handling.
-    - https://github.com/materialsproject/custodian
-
-    Restricted to using the "KSPACING" INCAR flag as commonly used for high-throughput calculations
-    - KSPACING = 0.25 used as a reasonably safe default -> do you own convergence testing!!
-
-    Using half_kmesh_first_relax = True can be very beneficial to get closer to a structural minima at a drastically reduced cost.
-    - see discussion -> https://github.com/hackingmaterials/atomate/issues/19
-
-    Args:
-        output_dir (str): relative path to write submission file
-        kspacing (float, optional): K-point mesh spacing with VASP KSPACING tag (https://www.vasp.at/wiki/index.php/KSPACING). Defaults to 0.25.
-        half_kmesh_first_relax (bool, optional): Use more sparse k-mesh for initial relax. Defaults to True.
-
-    Returns:
-        None: {output_dir}/cstdn.py script written.
-    """
-
-    print(f"----- Writing double-relax Custodian script -----")
-
-    cstdn_script = f"# Custodian double-relaxation script.\n\nvasp_cmd = {vasp_cmd}\n"
-
-    if half_kmesh_first_relax == True:
-        cstdn_script += (
-            f"""kspacing_initial = {kspacing*2}\nkspacing = {kspacing}\n\n"""
-        )
-    else:
-        cstdn_script += f"""kspacing_initial = {kspacing}\nkspacing = {kspacing}\n\n"""
-
-    cstdn_script += """import os
-from custodian.custodian import Custodian
-from custodian.vasp.handlers import VaspErrorHandler
-from custodian.vasp.jobs import VaspJob
-
-subset = list(VaspErrorHandler.error_msgs.keys())
-handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
-
-step1 = VaspJob(
-    vasp_cmd=vasp_cmd,
-    final=False,
-    suffix=".1",
-    settings_override=[
+    # read in previous incar + update with general optical flags
+    incar = Incar.from_file("INCAR")
+    incar.update(
         {
-            "dict": "INCAR",
-            "action": {
-                "_set": {
-                    "KSPACING": kspacing_initial
-                }
-            },
-        },
-    ],
-)
+            "NBANDS": new_nbands,
+            "LWAVE": False,
+            "LCHARG": False,
+            "NEDOS": 2000,  # for adequate sampling
+            "SIGMA": 0.1,
+            "ALGO": "Normal",
+            "EDIFF": 1e-8,
+            "LREAL": False,
+            "LOPTICS": True,
+            "CSHIFT": 0.01,
+        }
+    )
 
-step2 = VaspJob(
-    vasp_cmd=vasp_cmd,
-    final=True,
-    settings_override=[
-        {
-            "dict": "INCAR",
-            "action": {
-                "_set": {
-                    "KSPACING": kspacing
-                }
-            },
-        },
-        {"file": "CONTCAR", "action": {"_file_copy": {"dest": "POSCAR"}}},
-    ],
-)
+    # only make further changes if user gives them
+    if bool(user_incar_changes) == True:
+        incar.update(user_incar_changes)
+
+    incar.write_file("INCAR")  # overwrite INCAR with new flags
+
+    # get back to original directory where this was called
+    os.chdir(og_path)
+
+    return None
 
 
-jobs = [step1, step2]
-c = Custodian(handlers, jobs, max_errors=3)
-c.run()"""
-    with open(f"{output_dir}/cstdn.py", "w+") as f:
-        f.writelines(cstdn_script)
+# TODO just copied in for now from the perovskite HEO project - still needs to be fixed
+def set_up_bandstructure_calc():
+    """For making a new directory for density of states calculations (should be called in directory where "02_static" exists)
+    - NBANDS is 1.5x from the default value of 02_static calculation
+
+    Additional, manual steps are required for this function still due to band structure process:
+        NOTE that this is for the 'regular' band structure calculations (i.e., not unfolding)
+        1. run 01_pbe calculation
+        2. get high-symmetry k-path with sumo (> sumo-kgen --hybrid --symprec 0.1 --pymatgen)
+        3. copy KPOINTS_band to KPOINTS
+        4. copy WAVECAR from finished 01_pbe calculation to the 'bandstructure' directory
+        5. now can run actual metaGGA band structure calculation
+    """
+
+    import os
+    from pymatgen.io.vasp.outputs import Eigenval
+
+    print(f"-> Making bandstructure directory...")
+
+    os.mkdir("05_bandstructure")
+    os.system(
+        f"cp 02_static/INCAR 02_static/IBZKPT 02_static/POSCAR 02_static/KPOINTS 02_static/POTCAR 02_static/CHGCAR 02_static/WAVECAR 02_static/submitvasp ./05_bandstructure"
+    )
+    os.chdir("05_bandstructure")
+
+    e = Eigenval("../02_static/EIGENVAL")
+
+    nbands = e.nbands
+    new_nbands = int(nbands * 1.5)  # increasing NBANDS by 1.5x
+    os.system(f"echo NBANDS = {new_nbands} >> INCAR")
+    print(f"number of bands: {nbands} -> {new_nbands}")
+
+    os.system("perl -pi -e 's/LCHARG = True/LCHARG = False/g' INCAR")
+    os.system(f"echo NEDOS = 5001 >> INCAR")  # for adequate sampling
+    os.system("perl -pi -e 's/LREAL = Auto/LREAL = False/g' INCAR")
+
+    os.mkdir("01_pbe")
+    os.system("cp * 01_pbe")
+    os.system("rm CHGCAR WAVECAR")
+    os.chdir("01_pbe")
+
+    os.system("perl -pi -e 's/METAGGA = R2scan/GGA = PE/g' INCAR")
+    os.system(f"echo ICHARG = 11 >> INCAR")
 
 
 def get_magorder(
@@ -508,87 +498,124 @@ def update_incar_with_magorder(path: str, magmom_list: list) -> None:
     return None
 
 
-# TODO just copied in for now from the perovskite HEO project - still needs to be fixed
-def set_up_optical_calc(sigma=0.1) -> None:
+def write_custodian_static(
+    output_dir: str,
+    vasp_cmd: tuple = ("srun", "vasp_std"),
+) -> None:
     """
-    For making a new directory for optical calculations (should be called in directory where "02_static" exists).
-    - NBANDS is doubled from the default value of 02_static calculation
+    Write a generic static Custodian script for calculation workflow and error handling.
+    - https://github.com/materialsproject/custodian
 
     Args:
-        sigma (float, optional): Smearing parameter than is usually increased for optical calculations compared to relaxation. Defaults to 0.2.
-    """
-    import os
-    from pymatgen.io.vasp.outputs import Eigenval, Vasprun
+        output_dir (str): relative path to write submission file.
 
-    print(f"-> Making optical directory...")
-
-    os.mkdir("04_optical")
-    os.system(
-        f"cp 02_static/INCAR 02_static/POSCAR 02_static/KPOINTS 02_static/POTCAR 02_static/CHGCAR 02_static/WAVECAR 02_static/submitvasp ./04_optical"
-    )
-    os.chdir("04_optical")
-
-    e = Eigenval("../02_static/EIGENVAL")
-
-    nbands = e.nbands
-    new_nbands = nbands * 2  # doubling NBANDS
-    os.system(f"echo NBANDS = {new_nbands} >> INCAR")
-    print(f"number of bands: {nbands} -> {new_nbands}")
-
-    os.system("perl -pi -e 's/LWAVE = True/LWAVE = False/g' INCAR")
-    os.system("perl -pi -e 's/LCHARG = True/LCHARG = False/g' INCAR")
-    os.system(f"echo NEDOS = 20000 >> INCAR")  # for adequate sampling
-    os.system(f"perl -pi -e 's/SIGMA = 0.05/SIGMA = {sigma}/g' INCAR")
-    os.system("perl -pi -e 's/ALGO = All/ALGO = Normal/g' INCAR")
-    os.system("perl -pi -e 's/EDIFF = 1e-06/EDIFF = 1e-08/g' INCAR")
-    os.system("perl -pi -e 's/LREAL = Auto/LREAL = False/g' INCAR")
-    os.system(f"echo LOPTICS = True >> INCAR")
-    os.system(f"echo CSHIFT = 0.01 >> INCAR")
-
-
-####################################
-
-
-# TODO just copied in for now from the perovskite HEO project - still needs to be fixed
-def set_up_bandstructure_calc():
-    """For making a new directory for density of states calculations (should be called in directory where "02_static" exists)
-    - NBANDS is 1.5x from the default value of 02_static calculation
-
-    Additional, manual steps are required for this function still due to band structure process:
-        NOTE that this is for the 'regular' band structure calculations (i.e., not unfolding)
-        1. run 01_pbe calculation
-        2. get high-symmetry k-path with sumo (> sumo-kgen --hybrid --symprec 0.1 --pymatgen)
-        3. copy KPOINTS_band to KPOINTS
-        4. copy WAVECAR from finished 01_pbe calculation to the 'bandstructure' directory
-        5. now can run actual metaGGA band structure calculation
+    Returns:
+        None: {output_dir}/cstdn.py script written.
     """
 
-    import os
-    from pymatgen.io.vasp.outputs import Eigenval
+    print(f"----- Writing static Custodian script -----")
 
-    print(f"-> Making bandstructure directory...")
+    cstdn_script = f"# Custodian static script.\n\nvasp_cmd = {vasp_cmd}\n"
 
-    os.mkdir("05_bandstructure")
-    os.system(
-        f"cp 02_static/INCAR 02_static/IBZKPT 02_static/POSCAR 02_static/KPOINTS 02_static/POTCAR 02_static/CHGCAR 02_static/WAVECAR 02_static/submitvasp ./05_bandstructure"
-    )
-    os.chdir("05_bandstructure")
+    cstdn_script += """import os
+from custodian.custodian import Custodian
+from custodian.vasp.handlers import VaspErrorHandler
+from custodian.vasp.jobs import VaspJob
 
-    e = Eigenval("../02_static/EIGENVAL")
+subset = list(VaspErrorHandler.error_msgs.keys())
+handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
 
-    nbands = e.nbands
-    new_nbands = int(nbands * 1.5)  # increasing NBANDS by 1.5x
-    os.system(f"echo NBANDS = {new_nbands} >> INCAR")
-    print(f"number of bands: {nbands} -> {new_nbands}")
+step1 = VaspJob(
+    vasp_cmd=vasp_cmd,
+    final=True,
+)
 
-    os.system("perl -pi -e 's/LCHARG = True/LCHARG = False/g' INCAR")
-    os.system(f"echo NEDOS = 5001 >> INCAR")  # for adequate sampling
-    os.system("perl -pi -e 's/LREAL = Auto/LREAL = False/g' INCAR")
+jobs = [step1]
+c = Custodian(handlers, jobs, max_errors=3)
+c.run()"""
+    with open(f"{output_dir}/cstdn.py", "w+") as f:
+        f.writelines(cstdn_script)
 
-    os.mkdir("01_pbe")
-    os.system("cp * 01_pbe")
-    os.system("rm CHGCAR WAVECAR")
-    os.chdir("01_pbe")
 
-    os.system("perl -pi -e 's/METAGGA = R2scan/GGA = PE/g' INCAR")
-    os.system(f"echo ICHARG = 11 >> INCAR")
+def write_custodian_doublerelax(
+    output_dir: str,
+    vasp_cmd: tuple = ("srun", "vasp_std"),
+    kspacing=0.25,
+    half_kmesh_first_relax=True,
+) -> None:
+    """
+    Write a generic double relaxation Custodian script for calculation workflow and error handling.
+    - https://github.com/materialsproject/custodian
+
+    Restricted to using the "KSPACING" INCAR flag as commonly used for high-throughput calculations
+    - KSPACING = 0.25 used as a reasonably safe default -> do you own convergence testing!!
+
+    Using half_kmesh_first_relax = True can be very beneficial to get closer to a structural minima at a drastically reduced cost.
+    - see discussion -> https://github.com/hackingmaterials/atomate/issues/19
+
+    Args:
+        output_dir (str): relative path to write submission file
+        kspacing (float, optional): K-point mesh spacing with VASP KSPACING tag (https://www.vasp.at/wiki/index.php/KSPACING). Defaults to 0.25.
+        half_kmesh_first_relax (bool, optional): Use more sparse k-mesh for initial relax. Defaults to True.
+
+    Returns:
+        None: {output_dir}/cstdn.py script written.
+    """
+
+    print(f"----- Writing double-relax Custodian script -----")
+
+    cstdn_script = f"# Custodian double-relaxation script.\n\nvasp_cmd = {vasp_cmd}\n"
+
+    if half_kmesh_first_relax == True:
+        cstdn_script += (
+            f"""kspacing_initial = {kspacing*2}\nkspacing = {kspacing}\n\n"""
+        )
+    else:
+        cstdn_script += f"""kspacing_initial = {kspacing}\nkspacing = {kspacing}\n\n"""
+
+    cstdn_script += """import os
+from custodian.custodian import Custodian
+from custodian.vasp.handlers import VaspErrorHandler
+from custodian.vasp.jobs import VaspJob
+
+subset = list(VaspErrorHandler.error_msgs.keys())
+handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
+
+step1 = VaspJob(
+    vasp_cmd=vasp_cmd,
+    final=False,
+    suffix=".1",
+    settings_override=[
+        {
+            "dict": "INCAR",
+            "action": {
+                "_set": {
+                    "KSPACING": kspacing_initial
+                }
+            },
+        },
+    ],
+)
+
+step2 = VaspJob(
+    vasp_cmd=vasp_cmd,
+    final=True,
+    settings_override=[
+        {
+            "dict": "INCAR",
+            "action": {
+                "_set": {
+                    "KSPACING": kspacing
+                }
+            },
+        },
+        {"file": "CONTCAR", "action": {"_file_copy": {"dest": "POSCAR"}}},
+    ],
+)
+
+
+jobs = [step1, step2]
+c = Custodian(handlers, jobs, max_errors=3)
+c.run()"""
+    with open(f"{output_dir}/cstdn.py", "w+") as f:
+        f.writelines(cstdn_script)
