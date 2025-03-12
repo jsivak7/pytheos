@@ -239,7 +239,7 @@ def set_up_bandstructure(
     os.chdir("forWAVECAR")
     os.system("rm IBZKPT")
 
-    # read in previous incar + update flags
+    # read in incar + update flags
     incar = Incar.from_file("INCAR")
     incar.update(
         {
@@ -249,7 +249,7 @@ def set_up_bandstructure(
             "ICHARG": 11,  # NSCF calculation -> https://www.vasp.at/wiki/index.php/ICHARG
         }
     )
-    incar.as_dict().pop("METAGGA")
+    incar.pop("METAGGA")
     incar.write_file("INCAR")  # overwrite INCAR with new flags
 
     # get back to original directory where this was called
