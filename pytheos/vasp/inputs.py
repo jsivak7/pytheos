@@ -237,6 +237,7 @@ def set_up_bandstructure(
     os.system("rm CHGCAR WAVECAR")
 
     os.chdir("forWAVECAR")
+    os.system("rm IBZKPT")
 
     # read in previous incar + update flags
     incar = Incar.from_file("INCAR")
@@ -244,7 +245,6 @@ def set_up_bandstructure(
         {
             "ISMEAR": 0,
             "LCHARG": False,  # not needed
-            "METAGGA": None,  # need PBE WAVECAR
             "GGA": "PE",  # for PBE WAVECAR
             "ICHARG": 11,  # NSCF calculation -> https://www.vasp.at/wiki/index.php/ICHARG
         }
