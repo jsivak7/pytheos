@@ -171,6 +171,88 @@ def set_up_dos(
     return None
 
 
+def set_up_bandstructure(
+    source_dir: str = "relaxation",
+    output_dir: str = "bandstructure",
+    user_incar_changes: dict = None,
+    increase_nbands: float = 1.5,
+):
+
+    import os
+    from pytheos.vasp.outputs import load_vasprun
+    from pymatgen.io.vasp.outputs import Eigenval
+
+    print(f"----- Setting up VASP band structure calculation -----")
+    print("One needs to run band structure calculations in the following steps -->")
+    print("\t1. ")
+
+    # to get back to where this was originally called
+    og_path = os.path.abspath(".")
+
+    # load vasprun.xml (also performs a check for sufficient convergence)
+    v = load_vasprun(
+        path=f"{source_dir}/vasprun.xml",
+        parse_dos_eigen=False,
+    )
+
+    # make directory for bader calculation
+    os.mkdir(f"{output_dir}")
+
+    # get necessary files from source calculation
+    os.system(
+        f"cp {source_dir}/INCAR {source_dir}/IBZKPT {source_dir}/CONTCAR {source_dir}/POTCAR {source_dir}/CHGCAR {source_dir}/WAVECAR {output_dir}"
+    )
+
+    os.chdir(f"{output_dir}")
+    os.system("mv CONTCAR POSCAR")  # to ensure final structure is used
+
+    nbands = Eigenval("../02_static/EIGENVAL").nbands
+    new_nbands = int(nbands * increase_nbands)  # increasing NBANDS by increase_nbands
+
+    # read in previous incar + update with general BS flags
+    incar = Incar.from_file("INCAR")
+    incar.update(
+        {
+            "NBANDS": new_nbands,
+            "ISMEAR": -5,  # TESTING
+            "NEDOS": 2001,  # for adequate sampling
+            "NSW": 0,  # static calculation
+            "LCHARG": False,  # not needed
+            "LWAVE": True,
+            "NEDOS": 501,  # higher resolution
+            "LREAL": False,
+        }
+    )
+    # only make further changes if user gives them
+    if bool(user_incar_changes) == True:
+        incar.update(user_incar_changes)
+
+    incar.write_file("INCAR")  # overwrite INCAR with new flags
+
+    # make directory for static calculation to make WAVECAR
+    os.mkdir(f"forWAVECAR")
+
+    # get necessary files + remove CHGCAR/WAVECAR
+    os.system("cp * forWAVECAR")
+    os.system("rm CHGCAR WAVECAR")
+
+    # read in previous incar + update flags
+    incar = Incar.from_file("INCAR")
+    incar.update(
+        {
+            "ISMEAR": 0,
+            "LCHARG": False,  # not needed
+            "METAGGA": None,  # need PBE WAVECAR
+            "GGA": "PE",  # for PBE WAVECAR
+            "ICHARG": 11,  # NSCF calculation -> https://www.vasp.at/wiki/index.php/ICHARG
+        }
+    )
+    incar.write_file("INCAR")  # overwrite INCAR with new flags
+
+    # get back to original directory where this was called
+    os.chdir(og_path)
+
+
 def set_up_bader(
     source_dir: str = "relaxation",
     output_dir: str = "bader",
@@ -313,51 +395,6 @@ def set_up_dielectric(  # this is IPA only!
     os.chdir(og_path)
 
     return None
-
-
-# TODO just copied in for now from the perovskite HEO project - still needs to be fixed
-def set_up_bandstructure_calc():
-    """For making a new directory for density of states calculations (should be called in directory where "02_static" exists)
-    - NBANDS is 1.5x from the default value of 02_static calculation
-
-    Additional, manual steps are required for this function still due to band structure process:
-        NOTE that this is for the 'regular' band structure calculations (i.e., not unfolding)
-        1. run 01_pbe calculation
-        2. get high-symmetry k-path with sumo (> sumo-kgen --hybrid --symprec 0.1 --pymatgen)
-        3. copy KPOINTS_band to KPOINTS
-        4. copy WAVECAR from finished 01_pbe calculation to the 'bandstructure' directory
-        5. now can run actual metaGGA band structure calculation
-    """
-
-    import os
-    from pymatgen.io.vasp.outputs import Eigenval
-
-    print(f"-> Making bandstructure directory...")
-
-    os.mkdir("05_bandstructure")
-    os.system(
-        f"cp 02_static/INCAR 02_static/IBZKPT 02_static/POSCAR 02_static/KPOINTS 02_static/POTCAR 02_static/CHGCAR 02_static/WAVECAR 02_static/submitvasp ./05_bandstructure"
-    )
-    os.chdir("05_bandstructure")
-
-    e = Eigenval("../02_static/EIGENVAL")
-
-    nbands = e.nbands
-    new_nbands = int(nbands * 1.5)  # increasing NBANDS by 1.5x
-    os.system(f"echo NBANDS = {new_nbands} >> INCAR")
-    print(f"number of bands: {nbands} -> {new_nbands}")
-
-    os.system("perl -pi -e 's/LCHARG = True/LCHARG = False/g' INCAR")
-    os.system(f"echo NEDOS = 5001 >> INCAR")  # for adequate sampling
-    os.system("perl -pi -e 's/LREAL = Auto/LREAL = False/g' INCAR")
-
-    os.mkdir("01_pbe")
-    os.system("cp * 01_pbe")
-    os.system("rm CHGCAR WAVECAR")
-    os.chdir("01_pbe")
-
-    os.system("perl -pi -e 's/METAGGA = R2scan/GGA = PE/g' INCAR")
-    os.system(f"echo ICHARG = 11 >> INCAR")
 
 
 def get_magorder(
