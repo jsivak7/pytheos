@@ -245,6 +245,7 @@ def set_up_bandstructure(
         {
             "ISMEAR": 0,
             "LCHARG": False,  # not needed
+            "METAGGA": "",  # need PBE WAVECAR
             "GGA": "PE",  # for PBE WAVECAR
             "ICHARG": 11,  # NSCF calculation -> https://www.vasp.at/wiki/index.php/ICHARG
         }
