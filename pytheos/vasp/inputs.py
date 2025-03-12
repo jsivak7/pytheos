@@ -171,23 +171,25 @@ def set_up_dos(
     return None
 
 
-def set_up_metagga_bandstructure(
+def set_up_bandstructure(
     source_dir: str = "relaxation",
     output_dir: str = "bandstructure",
     user_incar_changes: dict = None,
     increase_nbands: float = 2,
-    sumo_kgen_cmd: str = "sumo-kgen --hybrid --pymatgen --symprec 0.1",
+    sumo_kgen_cmd: str = "sumo-kgen --pymatgen --symprec 0.1 --hybrid",
 ) -> None:
     """
     Sets up VASP input files for a band structure calculation from a previous calculation (usually a relaxation calculation). SUMO package is used to generate the high-symmetry k-point path -> https://github.com/SMTG-Bham/sumo
 
-    This is specifically for meta-GGA calculations, since the NSCF calculation must be run with PBE as meta-GGA calculations cannot be run with `ICHARG = 11` in VASP.
-
     Perform calculations in the following steps -->
 
-    1. run the {output_dir}/makeWAVECAR calculation
-    2. copy the WAVECAR from finished {output_dir}/makeWAVECAR calculation to {output_dir}
+    1. run the {output_dir}/NSCF calculation
+    2. copy the WAVECAR from finished {output_dir}/NSCF calculation to {output_dir}
     3. run the {output_dir} calculation
+
+    The NSCF calculation is performed with `GGA = PE` for meta-GGA calculations as `ICHARG = 11` cannot be performed with meta-GGA functionals.
+
+    One should remove the `--hybrid` from the default sumo_kgen_cmd argument for GGA band structures.
 
     Band structures can be plotted with the `sumo-bandplot` command -> https://smtg-bham.github.io/sumo/sumo-bandplot.html
 
@@ -195,10 +197,13 @@ def set_up_metagga_bandstructure(
 
     Args:
         source_dir (str, optional): Directory to source previous VASP files.. Defaults to "relaxation".
-        output_dir (str, optional): Directory to output new VASP files for DOS calculation. An additional directory inside of this will be made called "makeWAVECAR". Defaults to "bandstructure".
+        output_dir (str, optional): Directory to output new VASP files for DOS calculation. An additional directory inside of this will be made called "NSCF". Defaults to "bandstructure".
         user_incar_changes (dict, optional): Additional changes to INCAR that can supply (ex. {"NCORE": 24}).. Defaults to None.
         increase_nbands (float, optional): Factor to increase number of bands from source calculation. Defaults to 2.
-        sumo_kgen_cmd (str, optional): Sumo command for high-symmetry k-point path generation. Defaults to "sumo-kgen --hybrid --pymatgen --symprec 0.1".
+        sumo_kgen_cmd (str, optional): Sumo command for high-symmetry k-point path generation. Defaults to "sumo-kgen --pymatgen --symprec 0.1".
+
+    Raises:
+        ValueError: if an invalid combination of INCAR flags and sumo_kgen_cmd is given
 
     Returns:
         None: New directory is made for a VASP band structure calculation -> output_dir
@@ -210,8 +215,8 @@ def set_up_metagga_bandstructure(
     print(f"----- Setting up VASP band structure calculation -----")
     print(
         f"""\nPerform the following steps to obtain the band structure -->
-    1. run the {output_dir}/makeWAVECAR calculation
-    2. copy the WAVECAR from finished {output_dir}/makeWAVECAR calculation to {output_dir}
+    1. run the {output_dir}/NSCF calculation
+    2. copy the WAVECAR from finished {output_dir}/NSCF calculation to {output_dir}
     3. run the {output_dir} calculation
     """
     )
@@ -241,6 +246,25 @@ def set_up_metagga_bandstructure(
 
     # read in previous incar + update with general BS flags
     incar = Incar.from_file("INCAR")
+
+    # check to see if calculation uses meta-GGA XC functional
+    if "METAGGA" in incar:
+        is_metaGGA = True
+        print(
+            "Detected a meta-GGA calculation... NSCF calculation will use `GGA = PE` as meta-GGA calculations cannot be used for this step.\n\n"
+        )
+        if "hybrid" not in sumo_kgen_cmd:
+            raise ValueError(
+                f"Cannot run meta-GGA band structure calculation without hybrid-type k-point path - you gave -> {sumo_kgen_cmd}"
+            )
+    else:
+        is_metaGGA = False
+        os.system("rm IBZKPT")  # don't need this for GGA calculations
+        if "hybrid" in sumo_kgen_cmd:
+            raise ValueError(
+                f"Cannot run GGA band structure calculation with hybrid-type k-point path - you gave -> {sumo_kgen_cmd}"
+            )
+
     incar.update(
         {
             "NBANDS": new_nbands,
@@ -261,28 +285,36 @@ def set_up_metagga_bandstructure(
     incar.write_file("INCAR")  # overwrite INCAR with new flags
 
     # make directory for static calculation to make WAVECAR
-    os.mkdir(f"makeWAVECAR")
+    os.mkdir(f"NSCF")
 
-    # get necessary files + remove CHGCAR/WAVECAR
-    os.system("cp * makeWAVECAR")
+    # get necessary files and remove CHGCAR from bandstructure dir
+    os.system("cp INCAR POSCAR POTCAR CHGCAR NSCF")
     os.system("rm CHGCAR")
 
     # get KPOINTS_band file
     os.system(sumo_kgen_cmd)
     os.system("cp KPOINTS_band KPOINTS")
 
-    os.chdir("makeWAVECAR")
-    os.system("rm IBZKPT")
+    os.chdir("NSCF")
 
     # read in incar + update flags
     incar = Incar.from_file("INCAR")
-    incar.update(
-        {
-            "GGA": "PE",  # for PBE WAVECAR
-            "ICHARG": 11,  # NSCF calculation -> https://www.vasp.at/wiki/index.php/ICHARG
-        }
-    )
-    incar.pop("METAGGA")  # running PBE for WAVECAR
+
+    if is_metaGGA:
+        incar.update(
+            {
+                "GGA": "PE",  # run NSCF with GGA
+                "ICHARG": 11,  # NSCF calculation -> https://www.vasp.at/wiki/index.php/ICHARG
+            }
+        )
+        incar.pop("METAGGA")  # running PBE for WAVECAR
+    else:
+        incar.update(
+            {
+                "ICHARG": 11,  # NSCF calculation -> https://www.vasp.at/wiki/index.php/ICHARG
+            }
+        )
+
     incar.write_file("INCAR")  # overwrite INCAR with new flags
 
     # get back to original directory where this was called
