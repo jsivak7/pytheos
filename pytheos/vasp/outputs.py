@@ -66,7 +66,7 @@ def convert_baderACF_from_dat_to_csv() -> None:
     os.system("perl -pi -e 's/,,,/,/g' ACF.csv")
     os.system("perl -pi -e 's/,,/,/g' ACF.csv")
 
-    os.system("sed -i 's/^.\{1\}//g' ACF.csv")
+    os.system(r"sed -i 's/^.\{1\}//g' ACF.csv")
 
     os.system("perl -pi -e 's/#/ATOM_NUM/g' ACF.csv")
 

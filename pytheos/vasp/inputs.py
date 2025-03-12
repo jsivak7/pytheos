@@ -171,21 +171,50 @@ def set_up_dos(
     return None
 
 
-def set_up_bandstructure(
+def set_up_metagga_bandstructure(
     source_dir: str = "relaxation",
     output_dir: str = "bandstructure",
     user_incar_changes: dict = None,
     increase_nbands: float = 2,
     sumo_kgen_cmd: str = "sumo-kgen --hybrid --pymatgen --symprec 0.1",
-):
+) -> None:
+    """
+    Sets up VASP input files for a band structure calculation from a previous calculation (usually a relaxation calculation). SUMO package is used to generate the high-symmetry k-point path -> https://github.com/SMTG-Bham/sumo
 
+    This is specifically for meta-GGA calculations, since the NSCF calculation must be run with PBE as meta-GGA calculations cannot be run with `ICHARG = 11` in VASP.
+
+    Perform calculations in the following steps -->
+
+    1. run the {output_dir}/makeWAVECAR calculation
+    2. copy the WAVECAR from finished {output_dir}/makeWAVECAR calculation to {output_dir}
+    3. run the {output_dir} calculation
+
+    Band structures can be plotted with the `sumo-bandplot` command -> https://smtg-bham.github.io/sumo/sumo-bandplot.html
+
+    Band gaps and effective masses can be extracted with the `sumo-bandstats` command -> https://smtg-bham.github.io/sumo/sumo-bandstats.html
+
+    Args:
+        source_dir (str, optional): Directory to source previous VASP files.. Defaults to "relaxation".
+        output_dir (str, optional): Directory to output new VASP files for DOS calculation. An additional directory inside of this will be made called "makeWAVECAR". Defaults to "bandstructure".
+        user_incar_changes (dict, optional): Additional changes to INCAR that can supply (ex. {"NCORE": 24}).. Defaults to None.
+        increase_nbands (float, optional): Factor to increase number of bands from source calculation. Defaults to 2.
+        sumo_kgen_cmd (str, optional): Sumo command for high-symmetry k-point path generation. Defaults to "sumo-kgen --hybrid --pymatgen --symprec 0.1".
+
+    Returns:
+        None: New directory is made for a VASP band structure calculation -> output_dir
+    """
     import os
     from pytheos.vasp.outputs import load_vasprun
     from pymatgen.io.vasp.outputs import Eigenval
 
     print(f"----- Setting up VASP band structure calculation -----")
-    print("One needs to run band structure calculations in the following steps -->")
-    print("\t1. ")
+    print(
+        f"""\nPerform the following steps to obtain the band structure -->
+    1. run the {output_dir}/makeWAVECAR calculation
+    2. copy the WAVECAR from finished {output_dir}/makeWAVECAR calculation to {output_dir}
+    3. run the {output_dir} calculation
+    """
+    )
 
     # to get back to where this was originally called
     og_path = os.path.abspath(".")
@@ -216,9 +245,10 @@ def set_up_bandstructure(
         {
             "NBANDS": new_nbands,
             "ISMEAR": 0,  # needed for BS calculation
+            "SIGMA": 0.001,  # small smearing value
             "NEDOS": 2001,  # for adequate sampling
             "NSW": 0,  # static calculation
-            "LCHARG": False,  # not needed
+            "LCHARG": False,
             "LWAVE": True,
             "NEDOS": 501,  # higher resolution
             "LREAL": False,
@@ -231,25 +261,23 @@ def set_up_bandstructure(
     incar.write_file("INCAR")  # overwrite INCAR with new flags
 
     # make directory for static calculation to make WAVECAR
-    os.mkdir(f"forWAVECAR")
+    os.mkdir(f"makeWAVECAR")
 
     # get necessary files + remove CHGCAR/WAVECAR
-    os.system("cp * forWAVECAR")
+    os.system("cp * makeWAVECAR")
     os.system("rm CHGCAR")
 
     # get KPOINTS_band file
     os.system(sumo_kgen_cmd)
     os.system("cp KPOINTS_band KPOINTS")
 
-    os.chdir("forWAVECAR")
+    os.chdir("makeWAVECAR")
     os.system("rm IBZKPT")
 
     # read in incar + update flags
     incar = Incar.from_file("INCAR")
     incar.update(
         {
-            "ISMEAR": 0,
-            "LCHARG": False,  # not needed
             "GGA": "PE",  # for PBE WAVECAR
             "ICHARG": 11,  # NSCF calculation -> https://www.vasp.at/wiki/index.php/ICHARG
         }
