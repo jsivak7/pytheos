@@ -201,7 +201,7 @@ def set_up_bandstructure(
 
     # get necessary files from source calculation
     os.system(
-        f"cp {source_dir}/INCAR {source_dir}/IBZKPT {source_dir}/CONTCAR {source_dir}/POTCAR {source_dir}/CHGCAR {source_dir}/WAVECAR {output_dir}"
+        f"cp {source_dir}/INCAR {source_dir}/IBZKPT {source_dir}/CONTCAR {source_dir}/POTCAR {source_dir}/CHGCAR {output_dir}"
     )
 
     os.chdir(f"{output_dir}")
@@ -235,7 +235,7 @@ def set_up_bandstructure(
 
     # get necessary files + remove CHGCAR/WAVECAR
     os.system("cp * forWAVECAR")
-    os.system("rm CHGCAR WAVECAR")
+    os.system("rm CHGCAR")
 
     # get KPOINTS_band file
     os.system(sumo_kgen_cmd)
