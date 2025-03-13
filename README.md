@@ -1,6 +1,6 @@
 # pytheos
 
-Python tools for high-entropy oxides (pytheos) that I have developed over my PhD to assist in studying chemically disordered crystalline materials with computational methods.
+Python tools for high-entropy oxides (pytheos) is a package to assist in studying chemically disordered crystalline materials (high-entropy oxides, specifically) with computational methods.
 
 ## Installation
 1. Clone the repo.
