@@ -5,17 +5,17 @@
 # --> see https://www.vasp.at/wiki/index.php/KSPACING
 
 from ase import Atoms
-from pymatgen.io.vasp.inputs import Incar
+from pymatgen.io.vasp.inputs import Incar, Poscar, Kpoints, Potcar
 
 
-def set_up_relaxation(
+def write_inputs(
     struc: Atoms,
     output_dir: str = "relaxation",
     user_incar_changes=None,
     functional="r2scan",
 ) -> None:
     """
-    Sets up VASP input files for a ground-state (0K) relaxation calculation from a structure as an ASE Atoms object.
+    Makes VASP input files from a structure as an ASE Atoms object. Usually is a relaxation, however can handle others if desired.
 
     Args:
         struc (Atoms): structure to be relaxed
@@ -28,7 +28,7 @@ def set_up_relaxation(
         ValueError: if an invalid functional is given
 
     Returns:
-        None: New directory is made for a VASP relaxation calculation -> output_dir
+        None: New directory is made for a VASP calculation -> output_dir
     """
 
     import os
@@ -73,394 +73,6 @@ def set_up_relaxation(
         )
 
     calc.write_input(f"{output_dir}")
-
-    return None
-
-
-def set_up_dos(
-    source_dir: str = "relaxation",
-    output_dir: str = "dos",
-    user_incar_changes: dict = None,
-) -> None:
-    """
-    Sets up VASP input files for a DOS calculation from a previous calculation (usually a relaxation calculation).
-
-    The source directory should ideally contain CHGCAR and WAVECAR files.
-
-    Some DOS-specific changes are made to the INCAR by default from the source calculation ->
-    - NELECT = NELECT - 1 + 0.999999 (https://www.vasp.at/forum/viewtopic.php?t=17981)
-    - EMIN = EFERMI - 8 (more reasonable energy window)
-    - EMAX = EFERMI + 6 (more reasonable energy window)
-    - ISMEAR = -5 (tetrahedron method with Blöchl corrections)
-    - ALGO = Normal (since ISMEAR = -5 can often fail with ALGO = All)
-    - NSW = 0 (single ionic step)
-    - LCHARG = False (don't need usually)
-    - LWAVE = False (don't need usually)
-    - NEDOS = 501 (higher resolution DOS sampling)
-
-    Args:
-        source_dir (str, optional): Directory to source previous VASP files. Defaults to "relaxation".
-        output_dir (str, optional): Directory to output new VASP files for DOS calculation. Defaults to "dos".
-        user_incar_changes (dict, optional): Additional changes to INCAR that can supply (ex. {"NCORE": 24}). Defaults to None.
-
-    Returns:
-        None: New directory is made for a VASP DOS calculation -> output_dir
-    """
-    import os
-    from pytheos.vasp.outputs import load_vasprun
-    from pymatgen.io.vasp.outputs import Eigenval
-    from pymatgen.io.vasp.inputs import Incar
-
-    print(f"----- Setting up VASP density of states calculation -----")
-
-    # to get back to where this was originally called
-    og_path = os.path.abspath(".")
-
-    # load vasprun.xml (also performs a check for sufficient convergence)
-    v = load_vasprun(
-        path=f"{source_dir}/vasprun.xml",
-        parse_dos_eigen=True,
-    )
-
-    # make directory for DOS calculation
-    os.mkdir(f"{output_dir}")
-
-    # get necessary files from source calculation
-    os.system(
-        f"cp {source_dir}/INCAR {source_dir}/CONTCAR {source_dir}/POTCAR {source_dir}/CHGCAR {source_dir}/WAVECAR {output_dir}"
-    )
-
-    # due to issue with fermi level placement
-    e = Eigenval(f"{source_dir}/EIGENVAL")
-    num_elec = e.nelect
-    new_num_elec = num_elec - 1 + 0.999999
-
-    # for a more reasonable energy window
-    efermi = v.efermi
-    emin = efermi - 8
-    emax = efermi + 6
-
-    os.chdir(f"{output_dir}")
-    os.system("mv CONTCAR POSCAR")  # to ensure final structure is used
-
-    # read in previous incar + update with general DOS flags
-    incar = Incar.from_file("INCAR")
-    incar.update(
-        {
-            "NELECT": new_num_elec,  # per https://www.vasp.at/forum/viewtopic.php?t=17981
-            "EMIN": emin,  # for more reasonable energy window
-            "EMAX": emax,  # for more reasonable energy window
-            "ISMEAR": -5,  # proper ISMEAR for DOS -> https://www.vasp.at/wiki/index.php/ISMEAR
-            "ALGO": "Normal",  # since ALGO = All can often fail with ISMEAR = -5
-            "NSW": 0,  # static calculation
-            "LCHARG": False,  # usually not needed
-            "LWAVE": False,  # usually not needed
-            "NEDOS": 501,  # higher resolution DOS
-        }
-    )
-
-    # only make further changes if user gives them
-    if bool(user_incar_changes) == True:
-        incar.update(user_incar_changes)
-
-    incar.write_file("INCAR")  # overwrite INCAR with new flags
-
-    # get back to original directory where this was called
-    os.chdir(og_path)
-
-    return None
-
-
-def set_up_bandstructure(
-    source_dir: str = "relaxation",
-    output_dir: str = "bandstructure",
-    user_incar_changes: dict = None,
-    increase_nbands: float = 2,
-    sumo_kgen_cmd: str = "sumo-kgen --pymatgen --symprec 0.1 --hybrid",
-) -> None:
-    """
-    Sets up VASP input files for a band structure calculation from a previous calculation (usually a relaxation calculation). SUMO package is used to generate the high-symmetry k-point path -> https://github.com/SMTG-Bham/sumo
-
-    Perform calculations in the following steps -->
-
-    1. run the {output_dir}/nscf calculation
-    2. copy the WAVECAR from finished {output_dir}/nscf calculation to {output_dir}
-    3. run the {output_dir} calculation
-
-    The nscf calculation is performed with `GGA = PE` for meta-GGA calculations as `ICHARG = 11` cannot be performed with meta-GGA functionals.
-
-    One should remove the `--hybrid` from the default sumo_kgen_cmd argument for GGA band structures.
-
-    Band structures can be plotted with the `sumo-bandplot` command -> https://smtg-bham.github.io/sumo/sumo-bandplot.html
-
-    Band gaps and effective masses can be extracted with the `sumo-bandstats` command -> https://smtg-bham.github.io/sumo/sumo-bandstats.html
-
-    Args:
-        source_dir (str, optional): Directory to source previous VASP files.. Defaults to "relaxation".
-        output_dir (str, optional): Directory to output new VASP files for DOS calculation. An additional directory inside of this will be made called "nscf". Defaults to "bandstructure".
-        user_incar_changes (dict, optional): Additional changes to INCAR that can supply (ex. {"NCORE": 24}).. Defaults to None.
-        increase_nbands (float, optional): Factor to increase number of bands from source calculation. Defaults to 2.
-        sumo_kgen_cmd (str, optional): Sumo command for high-symmetry k-point path generation. Defaults to "sumo-kgen --pymatgen --symprec 0.1".
-
-    Raises:
-        ValueError: if an invalid combination of INCAR flags and sumo_kgen_cmd is given
-
-    Returns:
-        None: New directory is made for a VASP band structure calculation -> output_dir
-    """
-    import os
-    from pytheos.vasp.outputs import load_vasprun
-    from pymatgen.io.vasp.outputs import Eigenval
-
-    print(f"----- Setting up VASP band structure calculation -----")
-    print(
-        f"""\nPerform the following steps to obtain the band structure -->
-    1. run the {output_dir}/nscf calculation
-    2. copy the WAVECAR from finished {output_dir}/nscf calculation to {output_dir}
-    3. run the {output_dir} calculation
-    """
-    )
-
-    # to get back to where this was originally called
-    og_path = os.path.abspath(".")
-
-    # load vasprun.xml (also performs a check for sufficient convergence)
-    v = load_vasprun(
-        path=f"{source_dir}/vasprun.xml",
-        parse_dos_eigen=False,
-    )
-
-    # make directory for bader calculation
-    os.mkdir(f"{output_dir}")
-
-    # get necessary files from source calculation
-    os.system(
-        f"cp {source_dir}/INCAR {source_dir}/IBZKPT {source_dir}/CONTCAR {source_dir}/POTCAR {source_dir}/CHGCAR {output_dir}"
-    )
-
-    os.chdir(f"{output_dir}")
-    os.system("mv CONTCAR POSCAR")  # to ensure final structure is used
-
-    nbands = Eigenval(f"{og_path}/{source_dir}/EIGENVAL").nbands
-    new_nbands = int(nbands * increase_nbands)  # increasing NBANDS by increase_nbands
-
-    # read in previous incar + update with general BS flags
-    incar = Incar.from_file("INCAR")
-
-    # check to see if calculation uses meta-GGA XC functional
-    if "METAGGA" in incar:
-        is_metaGGA = True
-        print(
-            "Detected a meta-GGA calculation... nscf calculation will use `GGA = PE` as meta-GGA calculations cannot be used for this step.\n\n"
-        )
-        if "hybrid" not in sumo_kgen_cmd:
-            raise ValueError(
-                f"Cannot run meta-GGA band structure calculation without hybrid-type k-point path - you gave -> {sumo_kgen_cmd}"
-            )
-    else:
-        is_metaGGA = False
-        os.system("rm IBZKPT")  # don't need this for GGA calculations
-        if "hybrid" in sumo_kgen_cmd:
-            raise ValueError(
-                f"Cannot run GGA band structure calculation with hybrid-type k-point path - you gave -> {sumo_kgen_cmd}"
-            )
-
-    incar.update(
-        {
-            "NBANDS": new_nbands,
-            "ISMEAR": 0,  # needed for BS calculation
-            "SIGMA": 0.001,  # small smearing value
-            "NEDOS": 2001,  # for adequate sampling
-            "NSW": 0,  # static calculation
-            "LCHARG": False,
-            "LWAVE": True,
-            "NEDOS": 501,  # higher resolution
-            "LREAL": False,
-        }
-    )
-    # only make further changes if user gives them
-    if bool(user_incar_changes) == True:
-        incar.update(user_incar_changes)
-
-    incar.write_file("INCAR")  # overwrite INCAR with new flags
-
-    # make directory for static calculation to make WAVECAR
-    os.mkdir(f"nscf")
-
-    # get necessary files and remove CHGCAR from bandstructure dir
-    os.system("cp INCAR POSCAR POTCAR CHGCAR nscf")
-    os.system("rm CHGCAR")
-
-    # get KPOINTS_band file
-    os.system(sumo_kgen_cmd)
-    os.system("cp KPOINTS_band KPOINTS")
-
-    os.chdir("nscf")
-
-    # read in incar + update flags
-    incar = Incar.from_file("INCAR")
-
-    if is_metaGGA:
-        incar.update(
-            {
-                "GGA": "PE",  # run nscf with GGA
-                "ICHARG": 11,  # nscf calculation -> https://www.vasp.at/wiki/index.php/ICHARG
-            }
-        )
-        incar.pop("METAGGA")  # running PBE for WAVECAR
-    else:
-        incar.update(
-            {
-                "ICHARG": 11,  # nscf calculation -> https://www.vasp.at/wiki/index.php/ICHARG
-            }
-        )
-
-    incar.write_file("INCAR")  # overwrite INCAR with new flags
-
-    # get back to original directory where this was called
-    os.chdir(og_path)
-
-
-def set_up_bader(
-    source_dir: str = "relaxation",
-    output_dir: str = "bader",
-    user_incar_changes: dict = None,
-) -> None:
-    """
-    Sets up VASP input files for a Bader calculation from a previous calculation (usually a relaxation calculation).
-    - details on Bader charge analysis -> https://theory.cm.utexas.edu/henkelman/code/bader/
-
-    The source directory should ideally contain CHGCAR and WAVECAR files.
-
-    Some Bader-specific changes are made to the INCAR by default from the source calculation ->
-
-    - ISMEAR = 0 (Gaussian smearing)
-    - NSW = 0 (single ionic step)
-    - LAECHG = True (needed for Bader charge analysis - https://www.vasp.at/wiki/index.php/LAECHG)
-    - LCHARG = True (needed for Bader charge analysis)
-
-    Args:
-        source_dir (str, optional): Directory to source previous VASP files. Defaults to "relaxation".
-        output_dir (str, optional): Directory to output new VASP files for DBaderOS calculation. Defaults to "dos".
-        user_incar_changes (dict, optional): Additional changes to INCAR that can supply (ex. {"NCORE": 24}). Defaults to None.
-
-    Returns:
-        None: New directory is made for a VASP Bader calculation -> output_dir
-    """
-
-    import os
-    from pytheos.vasp.outputs import load_vasprun
-    from pymatgen.io.vasp.inputs import Incar
-
-    print(f"----- Setting up VASP Bader charge calculation -----")
-
-    # to get back to where this was originally called
-    og_path = os.path.abspath(".")
-
-    # load vasprun.xml (also performs a check for sufficient convergence)
-    v = load_vasprun(
-        path=f"{source_dir}/vasprun.xml",
-        parse_dos_eigen=False,
-    )
-
-    # make directory for bader calculation
-    os.mkdir(f"{output_dir}")
-
-    # get necessary files from source calculation
-    os.system(
-        f"cp {source_dir}/INCAR {source_dir}/CONTCAR {source_dir}/POTCAR {source_dir}/CHGCAR {source_dir}/WAVECAR {output_dir}"
-    )
-
-    os.chdir(f"{output_dir}")
-    os.system("mv CONTCAR POSCAR")  # to ensure final structure is used
-
-    # read in previous incar + update with general DOS flags
-    incar = Incar.from_file("INCAR")
-    incar.update(
-        {
-            "ISMEAR": 0,  # Gaussian smearing
-            "NSW": 0,  # static calculation (important for VASP Bader -> https://theory.cm.utexas.edu/henkelman/code/bader/)
-            "LAECHG": True,  # needed for Bader charge analysis (https://www.vasp.at/wiki/index.php/LAECHG)
-            "LCHARG": True,  # needed for Bader charge analysis
-        }
-    )
-
-    # only make further changes if user gives them
-    if bool(user_incar_changes) == True:
-        incar.update(user_incar_changes)
-
-    incar.write_file("INCAR")  # overwrite INCAR with new flags
-
-    # get back to original directory where this was called
-    os.chdir(og_path)
-
-    return None
-
-
-# NOTE this has not gone through as rigorous use/testing as other functions - USE WITH CARE!
-def set_up_dielectric(  # this is IPA only!
-    source_dir: str = "relaxation",
-    output_dir: str = "dielectric",
-    user_incar_changes: dict = None,
-):
-
-    import os
-    from pytheos.vasp.outputs import load_vasprun
-    from pymatgen.io.vasp.outputs import Eigenval
-    from pymatgen.io.vasp.inputs import Incar
-
-    print(f"----- Setting up VASP dielectric calculation -----")
-
-    # to get back to where this was originally called
-    og_path = os.path.abspath(".")
-
-    # load vasprun.xml to check for sufficient convergence
-    v = load_vasprun(
-        path=f"{source_dir}/vasprun.xml",
-        parse_dos_eigen=False,
-    )
-
-    # load EIGENVAL file to double the number of bands
-    e = Eigenval(filename=f"{source_dir}/EIGENVAL")
-    nbands = e.nbands
-    new_nbands = nbands * 2
-
-    # make directory for dielectric calculation
-    os.mkdir(f"{output_dir}")
-
-    # get necessary files from source calculation
-    os.system(
-        f"cp {source_dir}/INCAR {source_dir}/CONTCAR {source_dir}/POTCAR {source_dir}/CHGCAR {source_dir}/WAVECAR {output_dir}"
-    )
-
-    os.chdir(f"{output_dir}")
-    os.system("mv CONTCAR POSCAR")  # to ensure final structure is used
-
-    # read in previous incar + update with general optical flags
-    incar = Incar.from_file("INCAR")
-    incar.update(
-        {
-            "NBANDS": new_nbands,
-            "LWAVE": False,
-            "LCHARG": False,
-            "NEDOS": 2000,  # for adequate sampling
-            "SIGMA": 0.1,
-            "ALGO": "Normal",
-            "EDIFF": 1e-8,
-            "LREAL": False,
-            "LOPTICS": True,
-            "CSHIFT": 0.01,
-        }
-    )
-
-    # only make further changes if user gives them
-    if bool(user_incar_changes) == True:
-        incar.update(user_incar_changes)
-
-    incar.write_file("INCAR")  # overwrite INCAR with new flags
-
-    # get back to original directory where this was called
-    os.chdir(og_path)
 
     return None
 
@@ -603,124 +215,65 @@ def update_incar_with_magorder(path: str, magmom_list: list) -> None:
     return None
 
 
-def write_custodian_static(
-    output_dir: str,
-    vasp_cmd: tuple = ("srun", "vasp_std"),
-) -> None:
+def load_incar(path: str = "INCAR") -> Incar:
     """
-    Write a generic static Custodian script for calculation workflow and error handling.
-    - https://github.com/materialsproject/custodian
+    Loads INCAR file.
 
     Args:
-        output_dir (str): relative path to write submission file.
+        path (str, optional): Relative path for INCAR file. Defaults to "INCAR".
 
     Returns:
-        None: {output_dir}/cstdn.py script written.
+        Incar: Pymatgen Incar object
     """
 
-    print(f"----- Writing static Custodian script -----")
+    i = Incar.from_file(filename=path)
 
-    cstdn_script = f"# Custodian static script.\n\nvasp_cmd = {vasp_cmd}\n"
-
-    cstdn_script += """import os
-from custodian.custodian import Custodian
-from custodian.vasp.handlers import VaspErrorHandler
-from custodian.vasp.jobs import VaspJob
-
-subset = list(VaspErrorHandler.error_msgs.keys())
-handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
-
-step1 = VaspJob(
-    vasp_cmd=vasp_cmd,
-    final=True,
-)
-
-jobs = [step1]
-c = Custodian(handlers, jobs, max_errors=3)
-c.run()"""
-    with open(f"{output_dir}/cstdn.py", "w+") as f:
-        f.writelines(cstdn_script)
+    return i
 
 
-def write_custodian_doublerelax(
-    output_dir: str,
-    vasp_cmd: tuple = ("srun", "vasp_std"),
-    kspacing=0.25,
-    half_kmesh_first_relax=True,
-) -> None:
+def load_poscar(path: str = "POSCAR") -> Poscar:
     """
-    Write a generic double relaxation Custodian script for calculation workflow and error handling.
-    - https://github.com/materialsproject/custodian
-
-    Restricted to using the "KSPACING" INCAR flag as commonly used for high-throughput calculations
-    - KSPACING = 0.25 used as a reasonably safe default -> do you own convergence testing!!
-
-    Using half_kmesh_first_relax = True can be very beneficial to get closer to a structural minima at a drastically reduced cost.
-    - see discussion -> https://github.com/hackingmaterials/atomate/issues/19
+    Loads POSCAR file.
 
     Args:
-        output_dir (str): relative path to write submission file
-        kspacing (float, optional): K-point mesh spacing with VASP KSPACING tag (https://www.vasp.at/wiki/index.php/KSPACING). Defaults to 0.25.
-        half_kmesh_first_relax (bool, optional): Use more sparse k-mesh for initial relax. Defaults to True.
+        path (str, optional): Relative path for POSCAR file. Defaults to "POSCAR".
 
     Returns:
-        None: {output_dir}/cstdn.py script written.
+        Poscar: Pymatgen Poscar object
     """
 
-    print(f"----- Writing double-relax Custodian script -----")
+    p = Poscar.from_file(filename=path)
 
-    cstdn_script = f"# Custodian double-relaxation script.\n\nvasp_cmd = {vasp_cmd}\n"
-
-    if half_kmesh_first_relax == True:
-        cstdn_script += (
-            f"""kspacing_initial = {kspacing*2}\nkspacing = {kspacing}\n\n"""
-        )
-    else:
-        cstdn_script += f"""kspacing_initial = {kspacing}\nkspacing = {kspacing}\n\n"""
-
-    cstdn_script += """import os
-from custodian.custodian import Custodian
-from custodian.vasp.handlers import VaspErrorHandler
-from custodian.vasp.jobs import VaspJob
-
-subset = list(VaspErrorHandler.error_msgs.keys())
-handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
-
-step1 = VaspJob(
-    vasp_cmd=vasp_cmd,
-    final=False,
-    suffix=".1",
-    settings_override=[
-        {
-            "dict": "INCAR",
-            "action": {
-                "_set": {
-                    "KSPACING": kspacing_initial
-                }
-            },
-        },
-    ],
-)
-
-step2 = VaspJob(
-    vasp_cmd=vasp_cmd,
-    final=True,
-    settings_override=[
-        {
-            "dict": "INCAR",
-            "action": {
-                "_set": {
-                    "KSPACING": kspacing
-                }
-            },
-        },
-        {"file": "CONTCAR", "action": {"_file_copy": {"dest": "POSCAR"}}},
-    ],
-)
+    return p
 
 
-jobs = [step1, step2]
-c = Custodian(handlers, jobs, max_errors=3)
-c.run()"""
-    with open(f"{output_dir}/cstdn.py", "w+") as f:
-        f.writelines(cstdn_script)
+def load_potcar(path: str = "POTCAR") -> Potcar:
+    """
+    Loads POTCAR file.
+
+    Args:
+        path (str, optional): Relative path for POTCAR file. Defaults to "POTCAR".
+
+    Returns:
+        Potcar: Pymatgen Potcar object
+    """
+
+    pot = Potcar.from_file(filename=path)
+
+    return pot
+
+
+def load_kpoints(path: str = "KPOINTS") -> Kpoints:
+    """
+    Loads KPOINTS file.
+
+    Args:
+        path (str, optional): Relative path for KPOINTS file. Defaults to "KPOINTS".
+
+    Returns:
+        Kpoints: Pymatgen Kpoints object
+    """
+
+    kpts = Kpoints.from_file(filename=path)
+
+    return kpts

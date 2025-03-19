@@ -6,9 +6,9 @@ from pymatgen.io.vasp.outputs import Vasprun
 from ase import Atoms
 
 
-def calc_mp2020compat_energy(run: Vasprun) -> float:
+def apply_mp2020compat(run: Vasprun) -> float:
     """
-    Calculates the corrected energy using the MP2020Compatbility correction scheme for GGA/GGA+U and anion mixing calculations.
+    Applies MP2020Compatbility correction scheme for GGA/GGA+U and anion mixing calculations.
     - https://docs.materialsproject.org/methodology/materials-methodology/thermodynamic-stability/thermodynamic-stability/anion-and-gga-gga+u-mixing
 
     Calculation parameters/potcars should be consistent with MPRelaxSet for valid computations.
@@ -37,7 +37,7 @@ def calc_mp2020compat_energy(run: Vasprun) -> float:
     return energy_mp2020
 
 
-def calc_form_decomp_energy(
+def calc_form_decomp(
     struc: Atoms,
     energy: float,
     MPApiKey: str,

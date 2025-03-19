@@ -1,4 +1,4 @@
-# module to facilitate Vienna Ab initio Simulation Package (VASP) calculation outputs
+# module to facilitate vasp calculation outputs
 # see https://www.vasp.at/wiki/index.php/The_VASP_Manual
 
 from pymatgen.io.vasp import Vasprun
@@ -7,7 +7,8 @@ from pandas import DataFrame
 
 def load_vasprun(
     path: str = "vasprun.xml",
-    parse_dos_eigen: bool = False,
+    parse_dos: bool = True,
+    parse_eigen: bool = True,
 ) -> Vasprun:
     """
     Loads vasprun.xml file for further analyses. This is a very powerful class that can be used to get most common data from VASP calculations.
@@ -15,18 +16,23 @@ def load_vasprun(
 
     Args:
         path (str, optional): Relative path for *.xml file. Defaults to "vasprun.xml".
-        parse_dos_eigen (bool, optional): Option to parse DOS and Eigenvalues. Can save significant time if not interested in those data.. Defaults to False.
+        parse_dos (bool, optional): Option to parse DOS. Can save significant time if not interested in those data. Defaults to False.
+        parse_eigen (bool, optional): Option to parse EIGEN. Can save significant time if not interested in those data. Defaults to False.
 
     Raises:
         ValueError: If sufficient convergence has not been achieved.
 
     Returns:
-        Vasprun: Pymatgen.io.vasp.Vasprun object
+        Vasprun: Pymatgen Vasprun object
     """
 
-    from pymatgen.io.vasp import Vasprun
+    from pymatgen.io.vasp.outputs import Vasprun
 
-    v = Vasprun(filename=path)
+    v = Vasprun(
+        filename=path,
+        parse_dos=parse_dos,
+        parse_eigen=parse_eigen,
+    )
 
     # to ensure that calculation has reached convergence
     if v.converged == False:
