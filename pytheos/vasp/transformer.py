@@ -35,7 +35,7 @@ class Transformer:
             source_dir (str): Relative path to source directory where VASP files will be loaded.
         """
         self.source_dir: str = source_dir
-        print(f"Loading 'source' calc from ./{self.source_dir}/")
+        print(f"Reading source calculation from ./{self.source_dir}/")
         self.type = "source"  # for monitoring
 
         # contains built-in convergence check (ionic & electronic)
@@ -65,7 +65,7 @@ class Transformer:
 
         run_sanity_check(self.type)
 
-        print(f"Transforming '{self.type}' calc --> 'dos' calc")
+        print(f"Transforming to density of states calculation")
         self.type = "dos"
 
         # due to issue with fermi level placement
@@ -114,7 +114,7 @@ class Transformer:
 
         run_sanity_check(self.type)
 
-        print(f"Transforming '{self.type}' calc --> 'bader' calc")
+        print(f"Transforming to bader calculation")
         self.type = "bader"
 
         # chgcar and wavecar should be read in
@@ -162,7 +162,7 @@ class Transformer:
 
         run_sanity_check(self.type)
 
-        print(f"Transforming '{self.type}' calc --> 'bandstructure' calc")
+        print(f"Transforming to bandstructure calculation")
         self.type = "bandstructure"
 
         # increase number of bands
@@ -228,7 +228,7 @@ class Transformer:
             output_dir (str): Relative directory path to output files.
         """
 
-        print(f"Writing '{self.type}' calc --> ./{output_dir}/")
+        print(f"Writing Transformer to ./{output_dir}/")
 
         os.mkdir(output_dir)
 
@@ -249,7 +249,7 @@ class Transformer:
 
             self.ibzkpts.write_file(f"{output_dir}/IBZKPT")
 
-            og_path = os.path.abspath(".")  # to get back where we started
+            og_path = os.path.abspath("")  # to get back where we started
             os.chdir(output_dir)
             os.system(self.kgen_cmd)
             os.system("cp KPOINTS_band KPOINTS")
@@ -298,7 +298,7 @@ class Transformer:
 
         run_sanity_check(self.type)
 
-        print(f"Transforming '{self.type}' calc --> 'dielectric' calc")
+        print(f"Transforming to dielectric calculation")
         self.type = "dielectric"
 
         # chgcar and wavecar should be read in
@@ -339,17 +339,17 @@ def run_sanity_check(type) -> None:
     if type != "source":
 
         print(
-            "WARNING!!!\nYou are not transforming from the 'source' calc that was initially loaded."
+            "WARNING!!!\nYou are not transforming from the source calculation that was initially loaded"
         )
 
         while True:
             answer = input("Do you want to continue? (yes/no): ").lower()
             if answer in ["y", "yes"]:
-                print("Continuing...")
+                print("Continuing..")
                 break
             elif answer in ["n", "no"]:
-                print("Aborting...")
+                print("Aborting..")
                 exit()
                 break
             else:
-                print("Invalid input. Please enter 'yes' or 'no'.")
+                print("Invalid input. Please enter 'yes' or 'no'")
