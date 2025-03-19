@@ -215,6 +215,7 @@ class Transformer:
     def write_files(
         self,
         output_dir: str,
+        copy_submit_script: bool = True,
     ) -> None:
         """
         Write current Transformer to VASP files.
@@ -222,6 +223,7 @@ class Transformer:
 
         Args:
             output_dir (str): Relative directory path to output files.
+            copy_submit_script (bool): If want to copy same "submitvasp" from source calc. Defaults to True.
         """
 
         print(f"Writing Transformer to ./{output_dir}/")
@@ -277,6 +279,9 @@ class Transformer:
                 os.system(f"cp {self.source_dir}/CHGCAR {output_dir}/CHGCAR")
             if hasattr(self, "wavecar"):
                 os.system(f"cp {self.source_dir}/WAVECAR {output_dir}/WAVECAR")
+
+        if copy_submit_script:
+            os.system(f"cp {self.source_dir}/submitvasp {output_dir}/submitvasp")
 
     # NOTE that this has been less extensively tested/used than other methods!!
     def to_dielectric(
