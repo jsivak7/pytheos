@@ -1,4 +1,4 @@
-# for converting already-run VASP calculations into other calculation types
+# for transforming already-run VASP calculations into other calculation types
 
 from pytheos.vasp.outputs import load_vasprun
 from pymatgen.io.vasp.inputs import Incar, Poscar, Potcar, Kpoints
@@ -6,15 +6,15 @@ from pymatgen.io.vasp.outputs import Eigenval, Chgcar, Wavecar
 import os
 
 
-class Converter:
+class Transformer:
     """
-    Converter that loads object of previous VASP calculation files so that they can be converted to subsequent calculation types.
-    - Some commonly used conversions are provided as methods with reasonable default changes.
-    - Simple conversions can also be performed by just changing this object's attributes.
-        - ex. Converter.incar.update({"NCORE": 24})
+    Loads previous VASP calculation files as objects so that they can be transformed into subsequent calculations.
+    - Some commonly used transformations are provided as methods with reasonable default changes.
+    - Simple transformations can also be performed by just changing this object's attributes.
+        - ex. Transformer.incar.update({"NCORE": 24})
 
     If one wishes to perform multiple conversions from a single source calculation, this should be reinitialized following each conversion to ensure unintended changes were not applied.
-    - a sanity check is performed if the calc type does not equal "source", to help avoid mistakes
+    - a sanity check is performed if the calc type is not from the "source" to help avoid mistakes
 
     Attributes:
         source_dir (str): relative path to source calc directory.
@@ -56,7 +56,7 @@ class Converter:
         energy_window: float = 6.0,
     ) -> None:
         """
-        Converts loaded vasp calc object for a density of states (DOS) calc.
+        Transforms VASP calculation objects for density of states (DOS) calculation.
 
         Args:
             user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary - example. Defaults to None.
@@ -65,7 +65,7 @@ class Converter:
 
         run_sanity_check(self.type)
 
-        print(f"Converting '{self.type}' calc --> 'dos' calc")
+        print(f"Transforming '{self.type}' calc --> 'dos' calc")
         self.type = "dos"
 
         # due to issue with fermi level placement
@@ -104,7 +104,7 @@ class Converter:
         user_incar_changes: dict = None,
     ) -> None:
         """
-        Converts loaded vasp calc object for a Bader charge calc.
+        Transforms VASP calculation objects for Bader charge calculation.
 
         Details on Bader charge analysis: https://theory.cm.utexas.edu/henkelman/code/bader/
 
@@ -114,7 +114,7 @@ class Converter:
 
         run_sanity_check(self.type)
 
-        print(f"Converting '{self.type}' calc --> 'bader' calc")
+        print(f"Transforming '{self.type}' calc --> 'bader' calc")
         self.type = "bader"
 
         # chgcar and wavecar should be read in
@@ -141,7 +141,7 @@ class Converter:
         sumo_kgen_cmd: str = "sumo-kgen --pymatgen",
     ) -> None:
         """
-        Converts loaded vasp calc objects for a bandstructure calc.
+        Transforms VASP calculation objects for bandstructure calculation.
 
         The `sumo` package is used to generate the high-symmetry k-point path -> https://github.com/SMTG-Bham/sumo
 
@@ -162,7 +162,7 @@ class Converter:
 
         run_sanity_check(self.type)
 
-        print(f"Converting '{self.type}' calc --> 'bandstructure' calc")
+        print(f"Transforming '{self.type}' calc --> 'bandstructure' calc")
         self.type = "bandstructure"
 
         # increase number of bands
@@ -216,10 +216,17 @@ class Converter:
         if bool(user_incar_changes) == True:
             incar.update(user_incar_changes)
 
-    def write_inputs(
+    def write_files(
         self,
         output_dir: str,
     ) -> None:
+        """
+        Write current Transformer to VASP files.
+        - A more complex scheme is used for 'bandstructure' type calculations due to need of NSCF calculation.
+
+        Args:
+            output_dir (str): Relative directory path to output files.
+        """
 
         print(f"Writing '{self.type}' calc --> ./{output_dir}/")
 
@@ -231,7 +238,7 @@ class Converter:
         if hasattr(self, "kpoints"):
             self.kpoints.write_file(f"{output_dir}/KPOINTS")
 
-        # bandstructure calcs require more care since need NSCF prior
+        # specific scheme for bandstructure calculations
         if self.type == "bandstructure":
             print(
                 f"""\nPerform bandstructure calculations in the following steps...
@@ -268,10 +275,11 @@ class Converter:
             # CHGCAR is necessary for NSCF calculation
             os.system(f"cp {self.source_dir}/CHGCAR {output_dir}/nscf/CHGCAR")
 
+        # only copies over CHGCAR/WAVECAR if added as attributes to Transformer object
         else:
-            if hasattr(self, "chgcar"):
+            if hasattr(self, "chgcar"):  # copied, not written
                 os.system(f"cp {self.source_dir}/CHGCAR {output_dir}/CHGCAR")
-            if hasattr(self, "wavecar"):
+            if hasattr(self, "wavecar"):  # copied, not written
                 os.system(f"cp {self.source_dir}/WAVECAR {output_dir}/WAVECAR")
 
     # NOTE that this has been less extensively tested/used than other methods!!
@@ -281,7 +289,7 @@ class Converter:
         increase_nbands: float = 2,
     ) -> None:
         """
-        Converts loaded vasp calc object for a dielectric calc using the independent-particle approximation.
+        Transforms VASP calculation objects for dielectric calculation.
 
         Args:
             user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
@@ -290,7 +298,7 @@ class Converter:
 
         run_sanity_check(self.type)
 
-        print(f"Converting '{self.type}' calc --> 'dielectric' calc")
+        print(f"Transforming '{self.type}' calc --> 'dielectric' calc")
         self.type = "dielectric"
 
         # chgcar and wavecar should be read in
@@ -316,14 +324,22 @@ class Converter:
         if bool(user_incar_changes) == True:
             incar.update(user_incar_changes)
 
+    def load_chgcar(self) -> None:
+        """Method to load chgcar for unique transformations"""
+        self.chgcar = Chgcar.from_file(f"{self.source_dir}/WAVECAR")
+
+    def load_wavecar(self):
+        """Method to load wavecar for unique transformations"""
+        self.wavecar = Wavecar(f"{self.source_dir}/WAVECAR")
+
 
 def run_sanity_check(type) -> None:
-    """Run a sanity check when conversion methods are attempted for any type other than the inputted 'source' calc"""
+    """Run a sanity check when transformer methods are attempted for any type other than the inputted 'source' calc"""
 
     if type != "source":
 
         print(
-            "WARNING!!!\nYou are not converting from the 'source' calc that was initially loaded."
+            "WARNING!!!\nYou are not transforming from the 'source' calc that was initially loaded."
         )
 
         while True:
