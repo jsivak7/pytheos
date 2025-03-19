@@ -16,7 +16,7 @@ def write_static(
         None: {output_dir}/cstdn.py script written.
     """
 
-    print(f"----- Writing static Custodian script -----")
+    print(f"Writing static custodian script")
 
     cstdn_script = f"# Custodian static script.\n\nvasp_cmd = {vasp_cmd}\n"
 
@@ -65,7 +65,7 @@ def write_doublerelax(
         None: {output_dir}/cstdn.py script written.
     """
 
-    print(f"----- Writing double-relax Custodian script -----")
+    print(f"Writing double-relax custodian script")
 
     cstdn_script = f"# Custodian double-relaxation script.\n\nvasp_cmd = {vasp_cmd}\n"
 

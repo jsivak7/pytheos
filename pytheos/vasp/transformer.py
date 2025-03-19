@@ -35,7 +35,7 @@ class Transformer:
             source_dir (str): Relative path to source directory where VASP files will be loaded.
         """
         self.source_dir: str = source_dir
-        print(f"Reading source calculation from ./{self.source_dir}/")
+        print(f"Reading source calculation from ./{self.source_dir}")
         self.type = "source"  # for monitoring
 
         # contains built-in convergence check (ionic & electronic)
@@ -226,7 +226,7 @@ class Transformer:
             copy_submit_script (bool): If want to copy same "submitvasp" from source calc. Defaults to True.
         """
 
-        print(f"Writing Transformer to ./{output_dir}/")
+        print(f"Writing transformed calculation to ./{output_dir}")
 
         os.mkdir(output_dir)
 
