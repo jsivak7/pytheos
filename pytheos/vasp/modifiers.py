@@ -1,4 +1,4 @@
-# for transforming already-run VASP calculations into other calculation types
+# for modifying already-run VASP calculations into other calculation types
 
 from pytheos.vasp.outputs import load_vasprun
 from pymatgen.io.vasp.inputs import Incar, Poscar, Potcar, Kpoints
@@ -6,15 +6,15 @@ from pymatgen.io.vasp.outputs import Eigenval, Chgcar, Wavecar
 import os
 
 
-class Transformer:
+class CalcModifier:
     """
-    Loads previous VASP calculation files as objects so that they can be transformed into subsequent calculations.
-    - Some commonly used transformations are provided as methods with reasonable default changes.
-    - Simple transformations can also be performed by just changing this object's attributes.
-        - ex. Transformer.incar.update({"NCORE": 24})
+    Loads previous VASP calculation files as objects so that they can be modified for subsequent calculations.
+    - Some commonly used modifications are provided as methods with reasonable default changes.
+    - Simple modifications can also be performed by just changing this object's attributes.
+        - ex. CalcModifier.incar.update({"NCORE": 24})
 
-    If one wishes to perform multiple conversions from a single source calculation, this should be reinitialized following each conversion to ensure unintended changes were not applied.
-    - a sanity check is performed if the calc type is not from the "source" to help avoid mistakes
+    To perform multiple modifications from a single source calc, be sure to reinitialize this class to ensure unintended changes were not applied.
+    - a sanity check is performed if the calc type is not from the "source" to help avoid these mistakes
 
     Attributes:
         source_dir (str): relative path to source calc directory.
@@ -25,14 +25,14 @@ class Transformer:
         potcar (Potcar): Potcar object from source calc.
         eigenval (Eigenval): Eigenval loaded from source calc.
         kpoints (Kpoints): Kpoints loaded from source calc. Only assigned if `KSPACING` does not exist in source INCAR.
-        chgcar (bool): Only assigned by certain functions if needed for transformed calc.
-        wavecar (bool): Only assigned by certain methods if needed for transformed calc.
+        chgcar (bool): Only assigned by certain functions if needed for modifications.
+        wavecar (bool): Only assigned by certain methods if needed for modifications.
     """
 
     def __init__(self, source_dir: str) -> None:
         """
         Args:
-            source_dir (str): Relative path to source directory where VASP files will be loaded.
+            source_dir (str): Relative path to source directory from which VASP files will be loaded.
         """
         self.source_dir: str = source_dir
         print(f"Reading source calculation from ./{self.source_dir}")
@@ -56,16 +56,16 @@ class Transformer:
         energy_window: float = 6.0,
     ) -> None:
         """
-        Transforms VASP calculation objects for density of states (DOS) calculation.
+        Modifies VASP calculation objects for a density of states (DOS) calculation.
 
         Args:
-            user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary - example. Defaults to None.
+            user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
             energy_window (float, optional): Energy window to calculation DOS from the Fermi level in +/- directions. Defaults to 6.0.
         """
 
         run_sanity_check(self.type)
 
-        print(f"Transforming to density of states calculation")
+        print(f"Modifying calc for density of states")
         self.type = "dos"
 
         # due to issue with fermi level placement
@@ -102,9 +102,9 @@ class Transformer:
         user_incar_changes: dict = None,
     ) -> None:
         """
-        Transforms VASP calculation objects for Bader charge calculation.
-
-        Details on Bader charge analysis: https://theory.cm.utexas.edu/henkelman/code/bader/
+        Modifies VASP calculation objects for a Bader charge calculation.
+        - details on Bader charge analysis: https://theory.cm.utexas.edu/henkelman/code/bader/
+        - for VASP, you need to run the `chgsum.pl` script prior to running `bader` (see in link above)
 
         Args:
             user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
@@ -112,7 +112,7 @@ class Transformer:
 
         run_sanity_check(self.type)
 
-        print(f"Transforming to bader calculation")
+        print(f"Modifying calc for bader charge")
         self.type = "bader"
 
         self.chgcar = True
@@ -134,18 +134,14 @@ class Transformer:
         self,
         user_incar_changes: dict = None,
         increase_nbands: float = 2,
-        sumo_kgen_cmd: str = "sumo-kgen --pymatgen",
+        sumo_kgen_cmd: str = "sumo-kgen --pymatgen --hybrid",
     ) -> None:
         """
-        Transforms VASP calculation objects for bandstructure calculation.
-
-        The `sumo` package is used to generate the high-symmetry k-point path -> https://github.com/SMTG-Bham/sumo
-
-        One should add the `--hybrid` from the default sumo_kgen_cmd argument for metaGGA band structures.
-
-        Band structures can be plotted with the `sumo-bandplot` command -> https://smtg-bham.github.io/sumo/sumo-bandplot.html
-
-        Band gaps and effective masses can be extracted with the `sumo-bandstats` command -> https://smtg-bham.github.io/sumo/sumo-bandstats.html
+        Modifies VASP calculation objects for a band structure calculation.
+        - `sumo` package is used to generate the high-symmetry k-point path (https://github.com/SMTG-Bham/sumo)
+        - remove `--hybrid` from the default sumo_kgen_cmd argument for GGA band structures
+        - `sumo-bandplot` can be used to plot band structures (https://smtg-bham.github.io/sumo/sumo-bandplot.html)
+        - `sumo-bandstats` can be used to evaluate band gaps and effective masses (https://smtg-bham.github.io/sumo/sumo-bandstats.html)
 
         Args:
             user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
@@ -158,7 +154,7 @@ class Transformer:
 
         run_sanity_check(self.type)
 
-        print(f"Transforming to bandstructure calculation")
+        print(f"Modifying calc for band structure")
         self.type = "bandstructure"
 
         # increase number of bands
@@ -209,13 +205,54 @@ class Transformer:
         if user_incar_changes:
             self.incar.update(user_incar_changes)
 
+    # NOTE that this has been less extensively tested/used than other methods!!
+    def to_dielectric(
+        self,
+        user_incar_changes: dict = None,
+        increase_nbands: float = 2,
+    ) -> None:
+        """
+        Modifies VASP calculation objects for a dielectric calculation using the independent-particle approximation.
+        - see https://www.vasp.at/wiki/index.php/Dielectric_properties_of_SiC for more information
+
+        Args:
+            user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
+            increase_nbands (float, optional): Factor to increase number of bands from source calculation. Defaults to 2.
+        """
+
+        run_sanity_check(self.type)
+
+        print(f"Modifying calc for dielectric")
+        self.type = "dielectric"
+
+        self.chgcar = True
+        self.wavecar = True
+
+        self.incar.update(
+            {
+                "NBANDS": new_nbands,
+                "LWAVE": False,
+                "LCHARG": False,
+                "NEDOS": 2000,  # for adequate sampling
+                "SIGMA": 0.1,
+                "ALGO": "Normal",
+                "EDIFF": 1e-8,
+                "LREAL": False,
+                "LOPTICS": True,
+                "CSHIFT": 0.01,
+            }
+        )
+
+        if user_incar_changes:
+            self.incar.update(user_incar_changes)
+
     def write_files(
         self,
         output_dir: str,
         copy_submit_script: bool = True,
     ) -> None:
         """
-        Write current Transformer to VASP files.
+        Write current CalcModifier to VASP files.
         - A more complex scheme is used for 'bandstructure' type calculations due to need of NSCF calculation.
 
         Args:
@@ -223,7 +260,7 @@ class Transformer:
             copy_submit_script (bool): If want to copy same "submitvasp" from source calc. Defaults to True.
         """
 
-        print(f"Writing transformed calculation to ./{output_dir}")
+        print(f"Writing transformed calc to ./{output_dir}")
 
         os.mkdir(output_dir)
 
@@ -279,46 +316,6 @@ class Transformer:
 
         if copy_submit_script:
             os.system(f"cp {self.source_dir}/submitvasp {output_dir}/submitvasp")
-
-    # NOTE that this has been less extensively tested/used than other methods!!
-    def to_dielectric(
-        self,
-        user_incar_changes: dict = None,
-        increase_nbands: float = 2,
-    ) -> None:
-        """
-        Transforms VASP calculation objects for dielectric calculation.
-
-        Args:
-            user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
-            increase_nbands (float, optional): Factor to increase number of bands from source calculation. Defaults to 2.
-        """
-
-        run_sanity_check(self.type)
-
-        print(f"Transforming to dielectric calculation")
-        self.type = "dielectric"
-
-        self.chgcar = True
-        self.wavecar = True
-
-        self.incar.update(
-            {
-                "NBANDS": new_nbands,
-                "LWAVE": False,
-                "LCHARG": False,
-                "NEDOS": 2000,  # for adequate sampling
-                "SIGMA": 0.1,
-                "ALGO": "Normal",
-                "EDIFF": 1e-8,
-                "LREAL": False,
-                "LOPTICS": True,
-                "CSHIFT": 0.01,
-            }
-        )
-
-        if user_incar_changes:
-            self.incar.update(user_incar_changes)
 
     def add_chgcar(self) -> None:
         """Specify chgcar be copied to transformed calculation"""

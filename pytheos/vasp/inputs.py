@@ -1,8 +1,8 @@
-# module to facilitate Vienna Ab initio Simulation Package (VASP) calculation inputs
-# see https://www.vasp.at/wiki/index.php/The_VASP_Manual
+# facilitate Vienna Ab initio Simulation Package (VASP) calculation inputs
+# https://www.vasp.at/wiki/index.php/The_VASP_Manual
 
 # NOTE that it is assumed here that the KSPACING INCAR tag is used rather than a KPOINTS file
-# --> see https://www.vasp.at/wiki/index.php/KSPACING
+# https://www.vasp.at/wiki/index.php/KSPACING
 
 from ase import Atoms
 from pymatgen.io.vasp.inputs import Incar, Poscar, Kpoints, Potcar

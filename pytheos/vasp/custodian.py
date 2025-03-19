@@ -1,4 +1,4 @@
-# automated custodian writer functions for vasp
+# automated custodian writer functions for vasp calculations
 
 
 def write_static(
@@ -16,7 +16,7 @@ def write_static(
         None: {output_dir}/cstdn.py script written.
     """
 
-    print(f"Writing static custodian script")
+    print(f"Writing static custodian script to ./{output_dir}/cstdn.py")
 
     cstdn_script = f"# Custodian static script.\n\nvasp_cmd = {vasp_cmd}\n"
 
@@ -65,7 +65,7 @@ def write_doublerelax(
         None: {output_dir}/cstdn.py script written.
     """
 
-    print(f"Writing double-relax custodian script")
+    print(f"Writing double-relax custodian script to ./{output_dir}/cstdn.py")
 
     cstdn_script = f"# Custodian double-relaxation script.\n\nvasp_cmd = {vasp_cmd}\n"
 
