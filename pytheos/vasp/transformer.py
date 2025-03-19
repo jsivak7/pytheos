@@ -25,8 +25,8 @@ class Transformer:
         potcar (Potcar): Potcar object from source calc.
         eigenval (Eigenval): Eigenval loaded from source calc.
         kpoints (Kpoints): Kpoints loaded from source calc. Only assigned if `KSPACING` does not exist in source INCAR.
-        chgcar (Chgcar): Chgcar loaded from source calc. Only assigned by certain functions if needed for output calc.
-        wavecar (Wavecar): Wavecar loaded from source calc. Only assigned by certain functions if needed for output calc.
+        chgcar (bool): Only assigned by certain functions if needed for transformed calc.
+        wavecar (bool): Only assigned by certain methods if needed for transformed calc.
     """
 
     def __init__(self, source_dir: str) -> None:
@@ -77,9 +77,8 @@ class Transformer:
         emin = efermi - energy_window
         emax = efermi + energy_window
 
-        # chgcar and wavecar should be read in
-        self.chgcar = Chgcar.from_file(f"{self.source_dir}/CHGCAR")
-        self.wavecar = Wavecar(f"{self.source_dir}/WAVECAR")
+        self.chgcar = True
+        self.wavecar = True
 
         self.incar.update(
             {
@@ -117,9 +116,8 @@ class Transformer:
         print(f"Transforming to bader calculation")
         self.type = "bader"
 
-        # chgcar and wavecar should be read in
-        self.chgcar = Chgcar.from_file(f"{self.source_dir}/CHGCAR")
-        self.wavecar = Wavecar(f"{self.source_dir}/WAVECAR")
+        self.chgcar = True
+        self.wavecar = True
 
         self.incar.update(
             {
@@ -191,9 +189,7 @@ class Transformer:
                     f"Cannot run GGA band structure calculation with hybrid-type k-point path ({sumo_kgen_cmd})"
                 )
 
-        # chgcar and wavecar should be read into calc
-        self.chgcar = Chgcar.from_file(f"{self.source_dir}/CHGCAR")
-        self.wavecar = Wavecar(f"{self.source_dir}/WAVECAR")
+        self.chgcar = True
 
         self.incar.update(
             {
@@ -275,11 +271,11 @@ class Transformer:
             # CHGCAR is necessary for NSCF calculation
             os.system(f"cp {self.source_dir}/CHGCAR {output_dir}/nscf/CHGCAR")
 
-        # only copies over CHGCAR/WAVECAR if added as attributes to Transformer object
+        # only copies over CHGCAR/WAVECAR if added as boolean attributes to Transformer object
         else:
-            if hasattr(self, "chgcar"):  # copied, not written
+            if hasattr(self, "chgcar"):
                 os.system(f"cp {self.source_dir}/CHGCAR {output_dir}/CHGCAR")
-            if hasattr(self, "wavecar"):  # copied, not written
+            if hasattr(self, "wavecar"):
                 os.system(f"cp {self.source_dir}/WAVECAR {output_dir}/WAVECAR")
 
     # NOTE that this has been less extensively tested/used than other methods!!
@@ -301,9 +297,8 @@ class Transformer:
         print(f"Transforming to dielectric calculation")
         self.type = "dielectric"
 
-        # chgcar and wavecar should be read in
-        self.chgcar = Chgcar.from_file(f"{self.source_dir}/CHGCAR")
-        self.wavecar = Wavecar(f"{self.source_dir}/WAVECAR")
+        self.chgcar = True
+        self.wavecar = True
 
         self.incar.update(
             {
@@ -324,13 +319,13 @@ class Transformer:
         if bool(user_incar_changes) == True:
             incar.update(user_incar_changes)
 
-    def load_chgcar(self) -> None:
-        """Method to load chgcar for unique transformations"""
-        self.chgcar = Chgcar.from_file(f"{self.source_dir}/WAVECAR")
+    def add_chgcar(self) -> None:
+        """Specify chgcar be copied to transformed calculation"""
+        self.chgcar = True
 
-    def load_wavecar(self):
-        """Method to load wavecar for unique transformations"""
-        self.wavecar = Wavecar(f"{self.source_dir}/WAVECAR")
+    def add_wavecar(self):
+        """Specify wavecar be copied for transformed calculation"""
+        self.wavecar = True
 
 
 def run_sanity_check(type) -> None:
