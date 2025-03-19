@@ -94,9 +94,8 @@ class Transformer:
             }
         )
 
-        # check if user gave any additional changes
-        if bool(user_incar_changes) == True:
-            incar.update(user_incar_changes)
+        if user_incar_changes:
+            self.incar.update(user_incar_changes)
 
     def to_bader(
         self,
@@ -128,9 +127,8 @@ class Transformer:
             }
         )
 
-        # check if user gave any additional changes
-        if bool(user_incar_changes) == True:
-            incar.update(user_incar_changes)
+        if user_incar_changes:
+            self.incar.update(user_incar_changes)
 
     def to_bandstructure(
         self,
@@ -208,9 +206,8 @@ class Transformer:
         # for determining high-symmetry k-path
         self.kgen_cmd = sumo_kgen_cmd
 
-        # check if user gave any additional changes
-        if bool(user_incar_changes) == True:
-            incar.update(user_incar_changes)
+        if user_incar_changes:
+            self.incar.update(user_incar_changes)
 
     def write_files(
         self,
@@ -320,9 +317,8 @@ class Transformer:
             }
         )
 
-        # check if user gave any additional changes
-        if bool(user_incar_changes) == True:
-            incar.update(user_incar_changes)
+        if user_incar_changes:
+            self.incar.update(user_incar_changes)
 
     def add_chgcar(self) -> None:
         """Specify chgcar be copied to transformed calculation"""
