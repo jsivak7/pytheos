@@ -1,5 +1,4 @@
-# for energy computations using the Materials Project database
-# see https://next-gen.materialsproject.org
+# for energy computations using the MP database
 
 
 from pymatgen.io.vasp.outputs import Vasprun
@@ -111,7 +110,7 @@ def cleanup_decomp_rxn(decomp_entries: dict) -> str:
     Cleans up decomposition reaction from Pymatgen ComputedStructureEntries to a simpler, human-readable string.
 
     Args:
-        decomp_entries (dict): Dictionaries of ComputedStructureEntries outputted the calc_form_decom_energy function "decomp_entries"
+        decomp_entries (dict): Dictionaries of ComputedStructureEntries outputted.
 
     Returns:
         string: Decomposition reaction - ex. 0.25(MgO) + 0.75(NiO)

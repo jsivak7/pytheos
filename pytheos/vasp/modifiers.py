@@ -8,7 +8,7 @@ import os
 
 class CalcModifier:
     """
-    Loads previous VASP calculation files as objects so that they can be modified for subsequent calculations.
+    Loads previous VASP calculation files as objects so they can be modified for subsequent calculations.
     - Some commonly used modifications are provided as methods with reasonable default changes.
     - Simple modifications can also be performed by just changing this object's attributes.
         - ex. CalcModifier.incar.update({"NCORE": 24})
@@ -327,12 +327,12 @@ class CalcModifier:
 
 
 def run_sanity_check(type) -> None:
-    """Run a sanity check when transformer methods are attempted for any type other than the inputted 'source' calc"""
+    """Run a sanity check when CalcModifier methods are attempted for any type other than the inputted 'source' calc"""
 
     if type != "source":
 
         print(
-            "WARNING!!!\nYou are not transforming from the source calculation that was initially loaded"
+            "WARNING!!!\nYou are not modifying from the source calculation that was initially loaded"
         )
 
         while True:
