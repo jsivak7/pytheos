@@ -1,8 +1,12 @@
-<p align="center">
-  <img height="100" src="resources/logo.png">
-</p>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/logo/logo_final_white.svg">
+    <img alt="Logo" src="resources/logo/logo_final.svg"
+height="100">
+  </picture>
+</h1>
 
-***
+
 
 Python toolkit for high-entropy oxide simulations (pytheos) is an open-source package for studying chemically disordered crystalline materials with computational models.
 
