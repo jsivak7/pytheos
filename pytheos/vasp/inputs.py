@@ -15,20 +15,23 @@ def write_inputs(
     functional="r2scan",
 ) -> None:
     """
-    Makes VASP input files from a structure as an ASE Atoms object. Usually is a relaxation, however can handle others if desired.
+    Makes VASP input files from a structure as an ASE Atoms object.
+    Usually is a relaxation, however can handle other calculation types if desired.
 
     Args:
         struc (Atoms): structure to be relaxed
         output_dir (str): relative path to output generated files. Defaults to "relaxation".
-        user_incar_changes (dict, optional): changes that deviate from default INCAR parameters given in pbe/r2scan.yaml files. Defaults to None.
-        functional (str, optional): Exchange-Correlation (XC) functional to be used. Defaults to "r2scan". Options can be found in /pytheos/vasp/inputs_sets/.
+        user_incar_changes (dict, optional): changes that deviate from default
+            INCAR parameters given in pbe/r2scan.yaml files. Defaults to None.
+        functional (str, optional): Exchange-Correlation (XC) functional to be used.
+            Defaults to "r2scan". Options can be found in /pytheos/vasp/inputs_sets/.
 
     Raises:
         FileExistsError: if output_dir already exists
         ValueError: if an invalid functional is given
 
     Returns:
-        None: New directory is made for a VASP calculation -> output_dir
+        None: New directory is made for a VASP calculation -> ./output_dir
     """
 
     import os
@@ -37,7 +40,7 @@ def write_inputs(
     from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet
     from pymatgen.io.vasp.inputs import Kpoints
 
-    print(f"----- Setting up VASP relaxation calculation -----")
+    print(f"Writing general VASP calculation.")
 
     os.mkdir(output_dir)
 
@@ -69,7 +72,7 @@ def write_inputs(
         )
     else:
         raise ValueError(
-            f"{functional} is not available. Choose either a GGA ('pbe', 'pbesol') or a MetaGGA ('r2scan', 'scan')."
+            f"{functional} is not available. Choose either a GGA ('pbe', 'pbesol') or a MetaGGA ('r2scan', 'scan') functional."
         )
 
     calc.write_input(f"{output_dir}")

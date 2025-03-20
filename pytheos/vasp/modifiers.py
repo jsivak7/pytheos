@@ -260,7 +260,7 @@ class CalcModifier:
             copy_submit_script (bool): If want to copy same "submitvasp" from source calc. Defaults to True.
         """
 
-        print(f"Writing transformed calc to ./{output_dir}")
+        print(f"Writing modified calc to ./{output_dir}")
 
         os.mkdir(output_dir)
 
@@ -307,7 +307,7 @@ class CalcModifier:
             # CHGCAR is necessary for NSCF calculation
             os.system(f"cp {self.source_dir}/CHGCAR {output_dir}/nscf/CHGCAR")
 
-        # only copies over CHGCAR/WAVECAR if added as boolean attributes to Transformer object
+        # only copies over CHGCAR/WAVECAR if added as boolean attributes to CalcModifier class
         else:
             if hasattr(self, "chgcar"):
                 os.system(f"cp {self.source_dir}/CHGCAR {output_dir}/CHGCAR")
@@ -318,11 +318,11 @@ class CalcModifier:
             os.system(f"cp {self.source_dir}/submitvasp {output_dir}/submitvasp")
 
     def add_chgcar(self) -> None:
-        """Specify chgcar be copied to transformed calculation"""
+        """Specify chgcar be copied to modified calculation"""
         self.chgcar = True
 
     def add_wavecar(self):
-        """Specify wavecar be copied for transformed calculation"""
+        """Specify wavecar be copied for modified calculation"""
         self.wavecar = True
 
 

@@ -76,7 +76,7 @@ def make_sqs(
     return sqs
 
 
-def make_random(
+def decorate_randomly(
     struc: Atoms,
     dimensions: tuple,
     chemical_symbols: list,

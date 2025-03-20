@@ -1,8 +1,14 @@
-# pytheos
+<p align="center">
+  <img height="100" src="resources/logo.png">
+</p>
 
-Python toolkit for high-entropy oxide simulations (pytheos) is a package to assist in studying chemically disordered crystalline materials (high-entropy oxides, specifically) with computational methods.
+***
 
-Open-source packages such as [pymatgen](https://github.com/materialsproject/pymatgen), [custodian](https://github.com/materialsproject/custodian), and [sumo](https://github.com/SMTG-Bham/sumo) as well as the [Materials Project](https://next-gen.materialsproject.org/) database are heavily utilized to leverage existing computational machinery and data to study these high-entropy materials.
+Python toolkit for high-entropy oxide simulations (pytheos) is an open-source package for studying chemically disordered crystalline materials with computational models.
+
+Our interdisciplinary team focuses on high-entropy oxides specifically, as a part of the the NSF-funded [Penn State Materials Research Science and Engineering Center](https://www.mrsec.psu.edu/) (MRSEC).
+
+Open-source packages such as [pymatgen](https://github.com/materialsproject/pymatgen), [custodian](https://github.com/materialsproject/custodian), and [sumo](https://github.com/SMTG-Bham/sumo) as well as the [Materials Project database](https://next-gen.materialsproject.org/) are heavily utilized to leverage existing computational machinery and data in studing these high-entropy materials.
 
 ## Installation
 1. Clone the repo.

@@ -7,7 +7,9 @@ import pprint
 
 def get_db_version() -> str:
     """
-    Gets Materials Project database version - good to ensure reproducibility.
+    Gets Materials Project database version.
+
+    *Good practice to note this whenever a query is made for reproducibility.*
 
     Returns:
         str: Materials Project database version (YYYY_MM_DD)
@@ -45,11 +47,15 @@ def get_entries_across_chemsys(
     Mg, Co and O phases). Very useful for create phase diagrams across the entire chemical space
     (and then calculating relative stability using say decomposition enthalpy).
 
+    *One should ideally supply elements argument using `my_PDEntry.composition.chemical_system` to ensure that
+    the correct chemical system is queried.*
+
     Straightforward implementation of mp_api.client.MPRester.get_entries_in_chemsys
     (https://github.com/materialsproject/api/blob/main/mp_api/client/mprester.py).
 
     Args:
         elements (list): List of elements for chemical system to get entries. Example -> ["Mg", "Co", "O"].
+            Preferentially use -> my_PDEntry.composition.chemical_system
         MPApiKey (str): Materials Project API Key - user specific.
         thermo_type (str, optional): Exchange-Correlation functional used to calculate entries.
             Options are ["GGA_GGA+U", "R2SCAN"]. Defaults to "R2SCAN".

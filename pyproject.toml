@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "pytheos"
 version = "0.1.0"
-description = ""
+description = "Python toolkit for high-entropy oxide simulations (pytheos) is a package collecting computational tools developed to study chemically disordered crystalline materials."
 authors = ["Jacob Sivak <jacobsivak7@gmail.com>"]
 readme = "README.md"
 

@@ -1,10 +1,13 @@
 # general structure utilities
 
-from ase import Atoms
+import os
+from ase import io, Atoms
 from pymatgen.core import Structure
 
 
-def read_to_ase_atoms(file_path: str) -> Atoms:
+def read_to_ase_atoms(
+    file_path: str,
+) -> Atoms:
     """
     Read in structure file to ASE Atoms Object
 
@@ -14,7 +17,6 @@ def read_to_ase_atoms(file_path: str) -> Atoms:
     Returns:
         Atoms: ASE object to perform other operations
     """
-    from ase import io
 
     s = io.read(f"{file_path}")
     return s
@@ -39,8 +41,6 @@ def write_from_ase_atoms(
     Raises:
         FileExistsError: if given path for output file already exists, ensures that previously generated structures are not overwritten
     """
-    import os
-    from ase import io
 
     if os.path.exists(file_path) and overwrite == False:
         raise FileExistsError(file_path)
@@ -69,7 +69,6 @@ def convert_ase_atoms_to_pmg_structure(
     Returns:
         Structure: Pymatgen Structure object
     """
-    from pymatgen.core import Structure
 
     struc_pmg = Structure.from_ase_atoms(struc)
 
@@ -79,9 +78,28 @@ def convert_ase_atoms_to_pmg_structure(
     return struc_pmg
 
 
-def rattle_atoms(struc: Atoms, stddev=0.02) -> Atoms:
+def read_to_pmg_structure(
+    file_path: str,
+) -> Structure:
     """
-    Rattles atoms of a given input structure - often is helpful prior to relaxation to break initial symmetry
+    Shortcut to read in a structure to Pymatgen Structure object.
+
+    Args:
+        file_path (str): relative path to write structure file, include suffix for desired file type (*.vasp, *.cif, etc.)
+
+    Returns:
+        Structure: Pymatgen Structure object.
+    """
+    struc = Structure.from_file(filename=file_path)
+    return struc
+
+
+def rattle_atoms(
+    struc: Atoms,
+    stddev=0.02,
+) -> Atoms:
+    """
+    Rattles atoms of a given ASE Atoms structure - often is helpful prior to relaxation to break initial symmetry.
 
     Args:
         struc (Atoms): structure to be rattled
