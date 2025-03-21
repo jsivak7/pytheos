@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="resources/logo/logo_light.svg">
     <img alt="Logo" src="resources/logo/logo.svg"
-height="100">
+height="150">
   </picture>
 </h1>
 

@@ -10,15 +10,15 @@ def make_phasediagram_entry(
     name="my_PDEntry",
 ) -> PDEntry:
     """
-    Makes new phase diagram entry (PDEntry) object..
+    Makes new phase diagram entry (PDEntry) object.
 
-    Usually this is added to queried entries and used to generate PhaseDiagram and determine
-    relative stability for your PDEntry. PDEntries contain all of the data needed to construct
-    a PhaseDiagram
+    Usually this is added to queried entries and used to generate PhaseDiagram to determine
+    relative stability for your own PDEntry. PDEntries contain all of the data needed to
+    construct a PhaseDiagram, so they are useful to add your own calculations.
 
     NOTE that you have to be very careful that calculation parameters match those you will be
-    comparing this entry to!! Remember that MP applies different mixing schemes across their
-    database -> https://docs.materialsproject.org/methodology/materials-methodology/thermodynamic-stability/thermodynamic-stability.
+    comparing this entry to!! Remember that MP applies different mixing schemes across their database
+    - https://docs.materialsproject.org/methodology/materials-methodology/thermodynamic-stability/thermodynamic-stability.
 
     More info on PDEntries can be found at -> https://github.com/materialsproject/pymatgen/blob/master/src/pymatgen/analysis/phase_diagram.py.
 
@@ -69,7 +69,7 @@ def calc_form_energy(
 
     The formation energy is the energy relative to the elemental references.
 
-    Any energy correction schemes should already have been applied to the total energy
+    Any energy correction schemes should have already been applied to the total energy
     - see /pytheos/materials_project/corrections for more detail
 
     Args:
@@ -98,7 +98,7 @@ def calc_decomp_energy(
     - see C.J. Bartel et al. Npj Comput Mater 5 (2019) 4. https://doi.org/10.1038/s41524-018-0143-2
     - appears to be very useful for determining enthalpy cost of materials, especially for HEOs
 
-    Any energy correction schemes should already have been applied to the total energy
+    Any energy correction schemes should have already been applied to the total energy
     - see /pytheos/materials_project/corrections for more detail
 
     Args:
@@ -129,7 +129,7 @@ def calc_decomp_rxn(
     These reactions are quite useful in comparing to experimental synthesis attempts and to
     determine what phases might inhibit single-phase formation of a material.
 
-    Any energy correction schemes should already have been applied to the total energy
+    Any energy correction schemes should have already been applied to the total energy
     - see /pytheos/materials_project/corrections for more detail
 
     Args:
