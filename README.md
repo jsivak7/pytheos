@@ -1,7 +1,7 @@
 <h1 align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/logo/logo_final_white.svg">
-    <img alt="Logo" src="resources/logo/logo_final.svg"
+    <source media="(prefers-color-scheme: dark)" srcset="resources/logo/logo_light.svg">
+    <img alt="Logo" src="resources/logo/logo.svg"
 height="100">
   </picture>
 </h1>
