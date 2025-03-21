@@ -51,6 +51,30 @@ def load_vasprun(
     return v
 
 
+def run_bader_analysis(
+    chgsum_path: str = "chgsum.pl",
+    bader_path: str = "bader",
+) -> None:
+    """
+    Runs VASP Bader charge analysis and outputs data into ACF.csv.
+
+    NOTE: call in the same location as VASP output files.
+
+    https://theory.cm.utexas.edu/henkelman/code/bader/
+
+    Args:
+        chgsum_path (str, optional): _description_. Defaults to "chgsum.pl".
+        bader_path (str, optional): _description_. Defaults to "bader".
+    """
+    import os
+
+    print("Running Bader charge analysis.")
+
+    os.system(f"{chgsum_path} AECCAR0 AECCAR2")
+    os.system(f"{bader_path} CHGCAR -ref CHGCAR_sum")
+    convert_baderACF_from_dat_to_csv()
+
+
 def convert_baderACF_from_dat_to_csv() -> None:
     """
     Converts the ACF.dat output file from VASP Bader charge analysis to a .csv file with the name ACF.csv
