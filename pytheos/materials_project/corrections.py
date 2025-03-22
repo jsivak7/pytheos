@@ -1,6 +1,5 @@
 # for energy correction schemes from the Materials Project
 
-
 from pymatgen.io.vasp.outputs import Vasprun
 
 

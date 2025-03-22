@@ -63,7 +63,7 @@ class CalcModifier:
             energy_window (float, optional): Energy window to calculation DOS from the Fermi level in +/- directions. Defaults to 6.0.
         """
 
-        run_sanity_check(self.type)
+        self._run_sanity_check()
 
         print(f"Modifying calc for density of states")
         self.type = "dos"
@@ -110,7 +110,7 @@ class CalcModifier:
             user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
         """
 
-        run_sanity_check(self.type)
+        self._run_sanity_check()
 
         print(f"Modifying calc for bader charge")
         self.type = "bader"
@@ -152,7 +152,7 @@ class CalcModifier:
             ValueError: if an invalid combination of INCAR flags and sumo_kgen_cmd is given
         """
 
-        run_sanity_check(self.type)
+        self._run_sanity_check()
 
         print(f"Modifying calc for band structure")
         self.type = "bandstructure"
@@ -220,7 +220,7 @@ class CalcModifier:
             increase_nbands (float, optional): Factor to increase number of bands from source calculation. Defaults to 2.
         """
 
-        run_sanity_check(self.type)
+        self._run_sanity_check()
 
         print(f"Modifying calc for dielectric")
         self.type = "dielectric"
@@ -325,24 +325,23 @@ class CalcModifier:
         """Specify wavecar be copied for modified calculation"""
         self.wavecar = True
 
+    def _run_sanity_check(self) -> None:
+        """Run a sanity check when CalcModifier methods are attempted for any type other than the inputted 'source' calc"""
 
-def run_sanity_check(type) -> None:
-    """Run a sanity check when CalcModifier methods are attempted for any type other than the inputted 'source' calc"""
+        if self.type != "source":
 
-    if type != "source":
+            print(
+                "WARNING!!!\nYou are not modifying from the source calculation that was initially loaded"
+            )
 
-        print(
-            "WARNING!!!\nYou are not modifying from the source calculation that was initially loaded"
-        )
-
-        while True:
-            answer = input("Do you want to continue? (yes/no): ").lower()
-            if answer in ["y", "yes"]:
-                print("Continuing..")
-                break
-            elif answer in ["n", "no"]:
-                print("Aborting..")
-                exit()
-                break
-            else:
-                print("Invalid input. Please enter 'yes' or 'no'")
+            while True:
+                answer = input("Do you want to continue? (yes/no): ").lower()
+                if answer in ["y", "yes"]:
+                    print("Continuing..")
+                    break
+                elif answer in ["n", "no"]:
+                    print("Aborting..")
+                    exit()
+                    break
+                else:
+                    print("Invalid input. Please enter 'yes' or 'no'")
