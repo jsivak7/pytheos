@@ -3,6 +3,8 @@
 
 from mp_api.client import MPRester
 import pprint
+from dotenv import load_dotenv
+import os
 
 
 def get_db_version() -> str:
@@ -120,3 +122,32 @@ def get_entries_for_formula(
         )
 
     return entries
+
+
+def load_api_key():
+    """
+    Uses `python-dotenv` package (https://github.com/theskumar/python-dotenv) to automatically
+    load the user's Materials Project API key assuming the .env file has been set up and exists
+    somewhere in the `pytheos` source files.
+
+    To set this correctly up see docs/general_tips.md.
+
+    Raises:
+        ValueError: If MP_API_KEY cannot be loaded.
+
+    Returns:
+        str: User's MP API key for accessing the Materials Project API.
+    """
+
+    load_dotenv()
+
+    mp_api_key = os.getenv("MP_API_KEY")
+
+    if mp_api_key:
+        print("Materials Project API key loaded successfully.")
+    else:
+        raise FileNotFoundError(
+            """Materials Project API key could not be loaded. Have you set up a `.env` file??"""
+        )
+
+    return mp_api_key

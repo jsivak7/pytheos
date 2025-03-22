@@ -8,14 +8,14 @@ from ase import Atoms
 from pymatgen.io.vasp.inputs import Incar, Poscar, Kpoints, Potcar
 
 
-def write_inputs(
+def make_calc(
     struc: Atoms,
     output_dir: str = "relaxation",
     user_incar_changes=None,
     functional="r2scan",
 ) -> None:
     """
-    Makes VASP input files from a structure as an ASE Atoms object.
+    Makes VASP calculation input files from a structure as an ASE Atoms object.
     Usually is a relaxation, however can handle other calculation types if desired.
 
     Args:
