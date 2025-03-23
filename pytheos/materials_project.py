@@ -1,17 +1,18 @@
-# for querying data from the MP database
+# for accessing the Materials Project database through the API
 # API info -> https://next-gen.materialsproject.org/api
 
 from mp_api.client import MPRester
 import pprint
 from dotenv import load_dotenv
 import os
+from pymatgen.io.vasp import Vasprun
 
 
 def _load_api_key():
     """
     Uses `python-dotenv` package (https://github.com/theskumar/python-dotenv) to automatically
-    load the user's Materials Project API key assuming the .env file has been set up and exists
-    somewhere in the `pytheos` source files.
+    load a Materials Project API key assuming the .env file has been set up and exists
+    somewhere within the `pytheos` source files.
 
     To set this correctly up see docs/general_tips.md.
 
@@ -64,13 +65,13 @@ def print_query_fields() -> None:
         pprint.pprint(available_fields)
 
 
-def get_entries_across_chemsys(
+def query_entries_across_chemsys(
     elements: list,
     thermo_type: str = "R2SCAN",
     additional_criteria: dict = None,
 ) -> list:
     """
-    Gets a list of ComputedStructureEntries across entire chemical system for a given set of elements.
+    Queries a list of ComputedStructureEntries across entire chemical system for a given set of elements.
 
     For example, if given elements = ["Mg", "Co", "O"] this will return a list of all entries in the
     parent Mg-Co-O chemical system, as well as all the subsystems (all MgxOy, CoxOy, MgxCoy, MgxCoyOz,
@@ -112,13 +113,13 @@ def get_entries_across_chemsys(
     return entries
 
 
-def get_entries_for_formula(
+def query_entries_for_formula(
     formula: str,
     thermo_type: str = "R2SCAN",
     additional_criteria: dict = None,
 ) -> list:
     """
-    Gets a list of ComputedStructureEntries for a given chemical formula.
+    Queries a list of ComputedStructureEntries for a given chemical formula.
 
     For example, if given formula = "CoO" this will return a list of all entries with this
     chemical formula. This is especially useful when paired with for example
@@ -155,3 +156,35 @@ def get_entries_for_formula(
         )
 
     return entries
+
+
+def apply_mp2020compat(run: Vasprun) -> float:
+    """
+    Applies MP2020Compatbility correction scheme for GGA/GGA+U and anion mixing calculations.
+    - https://docs.materialsproject.org/methodology/materials-methodology/thermodynamic-stability/thermodynamic-stability/anion-and-gga-gga+u-mixing
+
+    Calculation parameters/potcars should be consistent with MPRelaxSet for valid computations.
+    - https://github.com/materialsproject/pymatgen/blob/master/src/pymatgen/io/vasp/MPRelaxSet.yaml
+
+    Args:
+        run (Vasprun): Pymatgen vasprun object. Used preferentially over raw energies to ensure
+            scheme is implemented correctly for a given material system and calculation specs.
+
+    Returns:
+        float: Corrected energy in eV/atom
+    """
+    from pymatgen.entries.compatibility import MaterialsProject2020Compatibility
+    import numpy as np
+
+    v = run.get_computed_entry()
+
+    # get original energy in eV/atom
+    energy_og = v.energy / len(v.structxure)
+    print(f"original energy = {np.round(energy_og, 4)}/atom")
+
+    # calculate corrected energy with MP2020Compatibility corrections
+    v.energy_adjustments = MaterialsProject2020Compatibility().get_adjustments(v)
+    energy_mp2020 = v.energy / len(v.structure)
+    print(f"corrected energy = {np.round(energy_mp2020, 4)}/atom")
+
+    return energy_mp2020
