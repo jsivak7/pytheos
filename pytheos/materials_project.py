@@ -14,7 +14,7 @@ def _load_api_key():
     load a Materials Project API key assuming the .env file has been set up and exists
     somewhere within the `pytheos` source files.
 
-    To set this correctly up see docs/general_tips.md.
+    To set this correctly up on your own machine see `docs/general_tips.md`.
 
     Raises:
         ValueError: If MP_API_KEY cannot be loaded.

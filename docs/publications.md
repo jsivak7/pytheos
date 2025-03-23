@@ -1,14 +1,12 @@
 # Publications
 
-Publications/preprints that have utilized this package.
-
-Please reach out if you have any questions or would like to discuss our team's work - contact Jacob via email (jts6114@psu.edu).
+Please reach out if you have any questions or would like to discuss our team's work - contact Jacob via email (jts6114@psu.edu). 
 
 ***
 
-*Loosely in chronological order with newest first -->*
+*Loosely in chronological order...*
 
-Almishal, S. S.; Furst, M.; Tan, Y.; **Sivak, J. T.**; Bejger, G.; Srikanth, D.; Petruska, J.; Rost, C. M.; Sinnott, S. B.; Chen, L.-Q. Thermodynamics-Inspired High-Entropy Oxide Synthesis. arXiv preprint arXiv:2503.07865 2025.
+Almishal, S. S.; Furst, M.; Tan, Y.; **Sivak, J. T.**; Bejger, G.; Srikanth, D.; Petruska, J.; Rost, C. M.; Sinnott, S. B.; Chen, L.-Q. Thermodynamics-Inspired High-Entropy Oxide Synthesis. arXiv preprint arXiv:2503.07865 2025. https://arxiv.org/abs/2503.07865.
 
 Caucci, M. K.; **Sivak, J. T.**; Almishal, S. S. I.; Rost, C. M.; Dabo, I.; Maria, J.-P.; Sinnott, S. B. Performance of Exchange-Correlation Approximations to Density Functional Theory for Rare-Earth Oxides. Computational Materials Science 2025, 253, 113837. https://doi.org/10.1016/j.commatsci.2025.113837.
 

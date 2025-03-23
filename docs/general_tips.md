@@ -24,8 +24,8 @@ A personal Materials Project API key can be generated at https://next-gen.materi
 The following steps can be taken to use your MP API key in `pytheos` ->
 
 1. Get your Materials Project API key from the above link.
-2. Copy  [../resources/example.env](../resources/example.env) --> [../.env](../.env) (i.e. `pytheos` root directory).
-3. Add your own API key to [../.env](../.env) file by replacing `your_mp_api_key`.
+2. Copy  [../resources/example.env](../resources/example_api_key.env) --> [../.env](../.env) (i.e. `pytheos` root directory).
+3. Add your own API key to [../.env](../.env) file by replacing `your_api_key`.
 4. Be sure that file is not in VCS/shared with others!
 
 Whenever you would like to access your MP API key quickly, you can load it before querying the MP API using:
@@ -34,6 +34,9 @@ from pytheos.materials_project import query
 
 mp_api_key = query.load_api_key()
 ```
+
+## Stability
+
 
 ## Machine-Learning Interatomic Potentials (MLIPs)
 

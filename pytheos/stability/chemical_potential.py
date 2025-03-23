@@ -1,39 +1,93 @@
-# for evaluating stability using the chemical potential
+# for evaluating material stability using chemical potential diagrams
 
 from pymatgen.analysis.phase_diagram import PhaseDiagram
 from pymatgen.core import Element
 from pandas import DataFrame
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import Figure
+import numpy as np
 from pymatgen.util.string import latexify
 
 
 class ChemPotDiagram:
-    """Currently limited to two-dimensional chemical potential diagrams."""
+    """
+    Class for evaluating chemical potential diagrams for a given cation-anion formula space.
+
+    The chemical potential diagram is the mathemetical dual to convex hull. How these diagrams
+    are constructed here utilizes the `pymatgen` implementation, for which details can be found in:
+    - https://docs.materialsproject.org/methodology/materials-methodology/thermodynamic-stability/chemical-potential-diagrams-cpds
+
+    Current implementation is limited to two-dimensional (2D) chemical potential diagrams,
+    though these can be generated in much higher dimensions as well if desired. You do sacrifice
+    human-interprettability however as these increase...
+
+    We utilize the oxygen chemical potential overlap as a descriptor for high-entropy oxide
+    single-phase stability, specifically explains why the (MgCoNiCuZn)O composition was the
+    first high-entropy/entropy-stabilized material synthesized as a single-phase rock salt oxide.
+    - More information can be found at: https://arxiv.org/abs/2503.07865
+
+    The original 1999 Yokokawa chemical potential diagram paper provides a wealth of
+    information on this subject:
+    - Yokokawa, H. "Generalized chemical potential diagram and its applications to
+    chemical reactions at interfaces between dissimilar materials." JPE 20,
+    258 (1999). https://doi.org/10.1361/105497199770335794
+
+    The Materials Project team has utilized these diagrams in the following paper as well:
+    - Todd, P. K., McDermott, M. J., Rom, C. L., Corrao, A. A., Denney, J. J., Dwaraknath,
+    S. S.,  Khalifah, P. G., Persson, K. A., & Neilson, J. R. (2021). Selectivity in
+    Yttrium Manganese Oxide Synthesis via Local Chemical Potentials in Hyperdimensional
+    Phase Space. Journal of the American Chemical Society, 143(37), 15185-15194.
+    https://doi.org/10.1021/jacs.1c06229
+
+
+    Attributes:
+        phase_diagram (PhaseDiagram): Pymatgen PhaseDiagram class.
+        cation (str): Cation of interest.
+        anion (str): Anion of interest. Defaults to "O".
+        target_compound (str): Formula of target compound. Example -> "NiO" or "ZrO2". Defaults to None.
+        all_ranges (DataFrame): Pandas DataFrame for all stable chemical potential ranges in the format {"formula": values,
+            "cation (eV)": values,"anion (eV)": values}. Defaults to None.
+        target_ranges (DataFrame): Pandas DataFrame for stable chemical potential ranges for target compound.
+            Same DataFrame format as `all_ranges`. Defaults to None.
+        target_anion_range (tuple): Bounds along anion chemical potential axis where target compound is stable.
+            Takes the format (min, max, distance) - all in eV. Defaults to None.
+        diagram (Figure): Matplotlib figure object of 2D chemical potential diagram with x-axis being cation
+            and y-axis being anion. Defaults to None.
+    """
 
     def __init__(
         self,
         phase_diagram: PhaseDiagram,
-        target_compound: str,
         cation: str,
         anion: str = "O",
+        target_compound: str = None,
     ):
+        """
+        Args:
+            phase_diagram (PhaseDiagram): Pymatgen PhaseDiagram class.
+            cation (str): Cation of interest.
+            anion (str, optional): Anion of interest. Defaults to "O".
+            target_compound (str, optional): Formula of target compound. Example -> "NiO" or "ZrO2".
+                Defaults to None.
+        """
         self.phase_diagram = phase_diagram
         self.target_compound = target_compound
         self.cation = cation
         self.anion = anion
 
-        self._check_target_is_stable()
+        if target_compound:
+            self._check_target_is_stable()
 
         self.all_ranges: DataFrame = None
         self.target_ranges: DataFrame = None
         self.target_anion_range: tuple = None
+        self.diagram: Figure = None
 
     def _check_target_is_stable(self) -> None:
         """
         Checks to ensure target compound is stable in supplied phase diagram.
 
-        Raises:
-            Exception: If target compound is not stable.
+        Automatically called during ChemPotDiagram initialization if `target_compound` is supplied.
         """
 
         stable_entries = self.phase_diagram.stable_entries
@@ -43,9 +97,24 @@ class ChemPotDiagram:
                 break
 
         else:
-            raise Exception(
-                f"Target compound ({self.target_compound}) is not stable in supplied phase diagram, therefore a chemical potential diagram cannot be constructed."
+            print(
+                f"WARNING!!!\nTarget compound ({self.target_compound}) is not stable in the supplied phase diagram, therefore it will not exist on the chemical potential diagram."
             )
+
+            while True:
+                answer = input("Do you want to continue?? (yes/no): ").lower()
+
+                if answer in ["y", "yes"]:
+                    print("Continuing...")
+                    break
+
+                elif answer in ["n", "no"]:
+                    print("Aborting...")
+                    exit()
+                    break
+
+                else:
+                    print("Invalid input. Please enter 'yes' or 'no'")
 
     def _get_range_map(self, element: str) -> dict:
         """
@@ -66,6 +135,24 @@ class ChemPotDiagram:
         return range_map
 
     def get_target_anion_range(self) -> tuple:
+        """
+        Extracts the bounds in anion chemical potential space for which the target compound is stable.
+
+        Computing the overlap/separation of anion chemical potential can be a powerful method for
+        rapidly screening chemical systems for cation combinations that can host the same/desired valence
+        for a possible high-entropy ceramic comosition.
+        - specific crystal structures do not matter, only stoichiometry since we are interested here in
+        the cation valence state only
+        - example implementation for rock salt oxides: https://arxiv.org/abs/2503.07865
+
+        Raises:
+            Exception: If target compound was not supplied to ChemPotDiagram instance.
+
+        Returns:
+            tuple: (minimum, maximum, distance) in eV
+        """
+        if self.target_compound is None:
+            raise Exception("A target compound has not been supplied.")
 
         range_map = self._get_range_map(element=self.anion)
 
@@ -86,6 +173,19 @@ class ChemPotDiagram:
         return self.target_anion_range
 
     def get_all_ranges(self) -> DataFrame:
+        """
+        Extract all ranges within constructed chemical potential diagram.
+
+        NOTE that there are two data points for each composition, as the composition
+        is stable for the line drawn between these two points in chemical potential space.
+
+        Returns:
+            DataFrame: {
+                "formula": values,
+                "cation (eV)": values,
+                "anion (eV)": values,
+                }
+        """
 
         ranges_dict = {
             "formula": [],
@@ -99,7 +199,7 @@ class ChemPotDiagram:
             for entry in range_map:
                 entry_formula = entry.composition.reduced_formula
 
-                if element == self.cation:  # only need to do for one element
+                if element == self.cation:  # only get formulas for one element
                     ranges_dict["formula"] += 2 * [entry_formula]
 
                 ranges_dict[f"{element} (eV)"].append(range_map[entry][0].coords[0][0])
@@ -113,13 +213,30 @@ class ChemPotDiagram:
 
         self.all_ranges = ranges_df
 
-        self._get_target_ranges()
+        if self.target_compound is not None:
+            self._get_target_ranges()
 
         return self.all_ranges
 
     def _add_elemental_ranges(self, ranges_dict: dict) -> dict:
+        """
+        Add in elemental ranges to compound ranges as elements are not explicitly
+        included in the `get_all_ranges` method, and therefore need to be added afterwards.
 
-        ### add in elemental data points since not included in range map explicitly
+        NOTE that the current implementation fixes the minimum value for elements at -50 eV.
+
+        Args:
+            ranges_dict (dict): Dictionary of the following form, but containing only compounds:
+                {
+                    "formula": values,
+                    "cation (eV)": values,
+                    "anion (eV)": values,
+                }
+
+        Returns:
+            dict: Dictionary of compounds with elements
+        """
+
         # cation
         ranges_dict["formula"] += 2 * [self.cation]
         ranges_dict[f"{self.cation} (eV)"].append(0)
@@ -139,6 +256,24 @@ class ChemPotDiagram:
         return ranges_dict
 
     def _get_target_ranges(self) -> DataFrame:
+        """
+        Gets chemical potential ranges for target compound.
+
+        Automatically called during `get_all_ranges()` method if target compound is supplied.
+
+        Raises:
+            Exception: If target compound was not supplied to ChemPotDiagram instance.
+
+        Returns:
+            DataFrame: {
+                "formula": values,
+                "cation (eV)": values,
+                "anion (eV)": values,
+                }
+        """
+
+        if self.target_compound is None:
+            raise Exception("A target compound has not been supplied.")
 
         self.target_ranges = self.all_ranges[
             self.all_ranges["formula"] == self.target_compound
@@ -146,12 +281,25 @@ class ChemPotDiagram:
 
         return self.target_ranges
 
-    def plot_diagram(
+    def make_diagram(
         self,
-        output_path,
         with_target: bool = True,
-    ):
+    ) -> Figure:
+        """
+        Makes a generic 2D chemical potential diagram across relevant chemical space using supplied ranges
+        with cation chemical potential on the x-axis and anion on the y-axis.
 
+        Args:
+            with_target (bool, optional): Overlays stable region for target compound in green on diagram.
+                Defaults to True.
+
+        Raises:
+            Exception: If chemical potential ranges have not yet been obtained.
+            Exception: If with_target = True, but target compound has not been supplied.
+
+        Returns:
+            Figure: Matplotlib Figure object of 2D chemical potential diagram.
+        """
         plt.rcParams["figure.dpi"] = 400
         plt.rcParams["figure.figsize"] = (3, 4)
         plt.rcParams["font.size"] = 12
@@ -164,6 +312,12 @@ class ChemPotDiagram:
         plt.rcParams["font.weight"] = "bold"
 
         plt.clf()
+        fig = plt.figure()
+
+        if self.all_ranges is None:
+            raise Exception(
+                "The chemical potential ranges need to be obtained before making a diagram."
+            )
 
         plt.plot(
             self.all_ranges[f"{self.cation} (eV)"],
@@ -174,29 +328,37 @@ class ChemPotDiagram:
         )
 
         if with_target:
-            plt.plot(
-                self.target_ranges[f"{self.cation} (eV)"],
-                self.target_ranges[f"{self.anion} (eV)"],
-                marker="s",
-                linewidth=2,
-                color="tab:green",
-            )
+            if self.target_compound is None:
+                raise Exception("A target compound has not been supplied.")
+            else:
+                plt.plot(
+                    self.target_ranges[f"{self.cation} (eV)"],
+                    self.target_ranges[f"{self.anion} (eV)"],
+                    marker="s",
+                    linewidth=2,
+                    color="tab:green",
+                )
 
-            plt.text(
-                x=self.all_ranges[f"{self.cation} (eV)"].to_list()[-1] + 0.5,
-                y=self.all_ranges[f"{self.anion} (eV)"][1] + 0.5,
-                s=rf"{latexify(self.target_compound)}",
-                color="tab:green",
-                ha="right",
-            )
+                plt.text(
+                    x=0.92,
+                    y=0.92,
+                    s=rf"{latexify(self.target_compound)}",
+                    transform=plt.gca().transAxes,
+                    color="tab:green",
+                    ha="right",
+                )
+
+        ticks = np.arange(-50, 2, 2)
+        plt.xticks(ticks)
+        plt.yticks(ticks)
 
         plt.xlim(
-            self.all_ranges[f"{self.cation} (eV)"][1] - 1,
-            self.all_ranges[f"{self.cation} (eV)"].to_list()[-1] + 1,
+            self.all_ranges[f"{self.cation} (eV)"][1] - 0.75,
+            self.all_ranges[f"{self.cation} (eV)"].to_list()[-1] + 0.75,
         )
         plt.ylim(
-            self.all_ranges[f"{self.anion} (eV)"].to_list()[-2] - 1,
-            self.all_ranges[f"{self.anion} (eV)"][1] + 1,
+            self.all_ranges[f"{self.anion} (eV)"].to_list()[-2] - 0.75,
+            self.all_ranges[f"{self.anion} (eV)"][1] + 0.75,
         )
 
         plt.xlabel(
@@ -209,24 +371,9 @@ class ChemPotDiagram:
         )
 
         plt.title(f"{self.cation} - {self.anion}", weight="bold")
-
         plt.tight_layout()
-        plt.savefig(fname=output_path)
 
+        self.diagram = fig
+        plt.close()
 
-def _calc_midpoint(point1, point2) -> tuple:
-    """
-    Calculates the midpoint of a line segment.
-
-    Args:
-        point1: A tuple representing the first endpoint (x1, y1).
-        point2: A tuple representing the second endpoint (x2, y2).
-
-    Returns:
-        A tuple representing the midpoint (x_m, y_m).
-    """
-    x1, y1 = point1
-    x2, y2 = point2
-    x_m = (x1 + x2) / 2
-    y_m = (y1 + y2) / 2
-    return (x_m, y_m)
+        return self.diagram

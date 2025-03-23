@@ -1,6 +1,6 @@
 # Funding
 
-<img src="../resources/logo/mrsec_logo.png" height="100">
+<img src="../resources/mrsec_logo.png" height="100">
 
 The authors acknowledge the use of facilities and instrumentation supported by NSF through the Pennsylvania State University [Materials Research Science and Engineering Center](https://www.mrsec.psu.edu/) [DMR-2011839]. 
 

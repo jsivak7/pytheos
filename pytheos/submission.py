@@ -1,4 +1,8 @@
-# write a general class here for slurm submission
+# TODO
+
+
+class SlurmSubmission:
+    pass
 
 
 def write_slurm_vasp(

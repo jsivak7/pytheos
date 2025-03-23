@@ -1,6 +1,4 @@
-# for evaluting stability using enthalpy
-# TODO add in mixing enthalpy here via materials propject data base, but not 100% how to do this yet
-# since I need to get only the same chemical formula as target material - just need to think about...
+# for evaluting a material's enthalpic stability
 
 from pymatgen.analysis.phase_diagram import PhaseDiagram, PDEntry
 
