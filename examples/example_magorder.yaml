@@ -1,7 +1,7 @@
 # assumes a rocksalt lattice parameter of 4.200 Angstroms
 # spin positions collected for up to 2x2x2 supercell
 
-parent_structure: >
+parent structure: >
   Mg4 O4
   1.0
     4.2000000000000000    0.0000000000000000    0.0000000000000000
@@ -20,7 +20,7 @@ parent_structure: >
     0.5000000000000000    0.5000000000000000    0.5000000000000000 O2-
 
 
-spin_up: [
+spin up: [
   [0.000, 0.000, 0.000],
   [0.000, 2.100, 6.300],
   [2.100, 0.000, 6.300],
@@ -39,7 +39,7 @@ spin_up: [
   [6.300, 6.300, 4.200]
   ]
 
-spin_down: [
+spin down: [
   [0.000, 0.000, 4.200],
   [0.000, 2.100, 2.100],
   [2.100, 0.000, 2.100],

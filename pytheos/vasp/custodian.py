@@ -1,26 +1,30 @@
-# automated custodian writer functions for vasp calculations
+# custodian script writer functions for vasp calculations
+# https://github.com/materialsproject/custodian
 
 
-def write_static(
-    output_dir: str = ".",
+def write_script(
+    output_dir: str = "./",
     vasp_cmd: tuple = ("srun", "vasp_std"),
+    max_errors: int = 3,
 ) -> None:
     """
-    Write a generic static Custodian script for calculation workflow and error handling.
-    - https://github.com/materialsproject/custodian
+    Writes a generic custodian script for VASP calculation.
 
     Args:
-        output_dir (str): relative path to write submission file.
+        output_dir (str, optional): Relative path to write `cstdn.py` file.
+            Defaults to "./".
+        vasp_cmd (tuple, optional): VASP software command to run calculation.
+            Defaults to ("srun", "vasp_std").
+        max_errors (int, optional): Maximum number of allowed errors handled by Custodian.
+            Defaults to 3.
 
     Returns:
-        None: {output_dir}/cstdn.py script written.
+        None: `cstdn.py` file written to `./output_path`.
     """
 
-    print(f"Writing static custodian script to ./{output_dir}/cstdn.py")
+    cstdn_script = f"""# Generic Custodian script for VASP calculation.
 
-    cstdn_script = f"# Custodian static script.\n\nvasp_cmd = {vasp_cmd}\n"
-
-    cstdn_script += """import os
+import os
 from custodian.custodian import Custodian
 from custodian.vasp.handlers import VaspErrorHandler
 from custodian.vasp.jobs import VaspJob
@@ -28,55 +32,61 @@ from custodian.vasp.jobs import VaspJob
 subset = list(VaspErrorHandler.error_msgs.keys())
 handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
 
-step1 = VaspJob(
-    vasp_cmd=vasp_cmd,
-    final=True,
-)
+step1 = VaspJob(vasp_cmd={vasp_cmd}, final=True)
 
 jobs = [step1]
-c = Custodian(handlers, jobs, max_errors=3)
-c.run()"""
+
+c = Custodian(handlers, jobs, max_errors={max_errors})
+
+c.run()
+"""
+
     with open(f"{output_dir}/cstdn.py", "w+") as f:
         f.writelines(cstdn_script)
 
+    return None
 
-def write_doublerelax(
-    output_dir: str = ".",
-    vasp_cmd: tuple = ("srun", "vasp_std"),
-    kspacing=0.25,
-    half_kmesh_first_relax=True,
+
+def write_double_relax_script(
+    output_dir: str = "./",
+    vasp_cmd_initial: tuple = ("srun", "vasp_std"),
+    vasp_cmd_final: tuple = ("srun", "vasp_std"),
+    incar_changes_initial: dict = {"KSPACING": 0.50},
+    incar_changes_final: dict = {"KSPACING": 0.25},
+    max_errors: int = 3,
 ) -> None:
     """
-    Write a generic double relaxation Custodian script for calculation workflow and error handling.
-    - https://github.com/materialsproject/custodian
+    Writes a double-relaxation custodian script for VASP calculations.
 
-    Restricted to using the "KSPACING" INCAR flag as commonly used for high-throughput calculations
-    - KSPACING = 0.25 used as a reasonably safe default -> do you own convergence testing!!
+    The `KSPACING` INCAR flag is used to facilitate high-throughput calculations.
+    - `KSPACING = 0.25` is a reasonably safe default, but do your own testing.
 
-    Using half_kmesh_first_relax = True can be very beneficial to get closer to a structural minima at a drastically reduced cost.
-    - see discussion -> https://github.com/hackingmaterials/atomate/issues/19
+    Using a less dense k-mesh for the initial relaxation (larger KSPACING) can be very
+    beneficial to get closer to a structural minima at a drastically reduced cost.
+    - https://github.com/hackingmaterials/atomate/issues/19 shows some discussion in this
 
     Args:
-        output_dir (str): relative path to write submission file
-        kspacing (float, optional): K-point mesh spacing with VASP KSPACING tag (https://www.vasp.at/wiki/index.php/KSPACING). Defaults to 0.25.
-        half_kmesh_first_relax (bool, optional): Use more sparse k-mesh for initial relax. Defaults to True.
+        output_dir (str, optional): Relative path to write `cstdn.py` file.
+            Defaults to "./".
+        vasp_cmd_initial (tuple, optional): VASP software command to run first relaxation.
+            Made to be flexible to allow for `vasp_gam` executable for initial relaxations.
+            Defaults to ("srun", "vasp_std").
+        vasp_cmd_final (tuple, optional): VASP software command to run second relaxation.
+            Defaults to ("srun", "vasp_std").
+        incar_changes_initial (_type_, optional): INCAR changes desired for first relaxation.
+            Defaults to {"KSPACING": 0.50}.
+        incar_changes_final (_type_, optional): INCAR changes desired for second relaxation.
+            Defaults to {"KSPACING": 0.25}.
+        max_errors (int, optional): Maximum number of allowed errors handled by Custodian.
+            Defaults to 3.
 
     Returns:
-        None: {output_dir}/cstdn.py script written.
+        None: `cstdn.py` file written to `./output_path`.
     """
 
-    print(f"Writing double-relax custodian script to ./{output_dir}/cstdn.py")
+    cstdn_script = f"""# Custodian double-relaxation script for VASP calculation.
 
-    cstdn_script = f"# Custodian double-relaxation script.\n\nvasp_cmd = {vasp_cmd}\n"
-
-    if half_kmesh_first_relax == True:
-        cstdn_script += (
-            f"""kspacing_initial = {kspacing*2}\nkspacing = {kspacing}\n\n"""
-        )
-    else:
-        cstdn_script += f"""kspacing_initial = {kspacing}\nkspacing = {kspacing}\n\n"""
-
-    cstdn_script += """import os
+import os
 from custodian.custodian import Custodian
 from custodian.vasp.handlers import VaspErrorHandler
 from custodian.vasp.jobs import VaspJob
@@ -85,40 +95,31 @@ subset = list(VaspErrorHandler.error_msgs.keys())
 handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
 
 step1 = VaspJob(
-    vasp_cmd=vasp_cmd,
+    vasp_cmd={vasp_cmd_initial}, 
     final=False,
     suffix=".1",
     settings_override=[
-        {
-            "dict": "INCAR",
-            "action": {
-                "_set": {
-                    "KSPACING": kspacing_initial
-                }
-            },
-        },
-    ],
+        {{"dict": "INCAR", "action": {{"_set": {{{incar_changes_initial}}}}}}}
+    ]
 )
 
 step2 = VaspJob(
-    vasp_cmd=vasp_cmd,
+    vasp_cmd={vasp_cmd_final}, 
     final=True,
     settings_override=[
-        {
-            "dict": "INCAR",
-            "action": {
-                "_set": {
-                    "KSPACING": kspacing
-                }
-            },
-        },
-        {"file": "CONTCAR", "action": {"_file_copy": {"dest": "POSCAR"}}},
-    ],
+        {{"dict": "INCAR", "action": {{"_set": {{{incar_changes_final}}}}}}},
+        {{"file": "CONTCAR", "action": {{"_file_copy": {{"dest": "POSCAR"}}}}}}
+    ]
 )
 
-
 jobs = [step1, step2]
+
 c = Custodian(handlers, jobs, max_errors=3)
-c.run()"""
+
+c.run()
+"""
+
     with open(f"{output_dir}/cstdn.py", "w+") as f:
         f.writelines(cstdn_script)
+
+    return None

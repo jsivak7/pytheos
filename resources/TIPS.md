@@ -1,12 +1,21 @@
-# General Tips
+# Tips
 
-*Last edited on March 22, 2025 by JTSivak*
+*Last edited on March 24, 2025*
 
 ## Structure Generation & Analysis
 
 
 ## VASP Calculations
+### Meta-GGA band structure calculations
+Band structures can be calculated for r2scan meta-gga in the following manner (assuming you have the chgcar from the final r2scan calculation):
+1. pbe static calculation from r2scan chgcar with `icharg = 11`, writing the wavecar
+2. r2scan static calculation with band structure high-symmetry k-point path from pbe wavecar
+    - chgcar should *not* be present
+    - cannot use `icharg = 11` with meta-ggas
 
+A pbe wavecar is needed for meta-gga bandstructure calculations otherwise there are very spiky bandstructures (which I also found documented on a google search). This methodology is recommended for meta-gga and hybrid functionals on the VASP Wiki, however I added in the ICHARG = 11 portion. This allows the magnetic state that is found from r2scan to still be realized in the pbe wavecar if the electronic structure is qualitatively different between the two functionals which is what we usually have with our heo calculations.
+
+This all is handled internally using the `pytheos.vasp.modifier.CalcModifier` class to make band structure calculation inputs.
 
 ## Materials Project
 
@@ -24,7 +33,7 @@ A personal Materials Project API key can be generated at https://next-gen.materi
 The following steps can be taken to use your MP API key in `pytheos` ->
 
 1. Get your Materials Project API key from the above link.
-2. Copy  [../resources/example.env](../resources/example_api_key.env) --> [../.env](../.env) (i.e. `pytheos` root directory).
+2. Copy  [../examples/example_api_key.env](../examples/example_api_key.env) --> [../.env](../.env) (i.e. `pytheos` root directory).
 3. Add your own API key to [../.env](../.env) file by replacing `your_api_key`.
 4. Be sure that file is not in VCS/shared with others!
 

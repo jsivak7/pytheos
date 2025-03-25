@@ -1,6 +1,8 @@
 # module to facilitate Crystal Hamiltonian Graph Neural Network (CHGNet) simulation inputs
 # see OG publication --> Deng, B. et al. Nat Mach Intell 5, 1031–1041 (2023). https://doi.org/10.1038/s42256-023-00716-3
 
+# TODO update with MatGL prefitted
+
 from ase import Atoms
 
 

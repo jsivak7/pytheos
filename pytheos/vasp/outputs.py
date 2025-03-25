@@ -1,6 +1,6 @@
 # module to facilitate vasp calculation outputs
 # see https://www.vasp.at/wiki/index.php/The_VASP_Manual
-
+# TODO make CalcOutputs class with some common outputs I use as attributes
 from pymatgen.io.vasp import Vasprun
 from pandas import DataFrame
 

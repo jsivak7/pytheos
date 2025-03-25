@@ -1,5 +1,7 @@
 # structure analysis tools
 
+# TODO make StructureAnalyzer class and clean this up some
+
 from ase import Atoms
 from pymatgen.core import Structure
 

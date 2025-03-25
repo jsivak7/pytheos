@@ -4,21 +4,23 @@ from pytheos.vasp.outputs import load_vasprun
 from pymatgen.io.vasp.inputs import Incar, Poscar, Potcar, Kpoints
 from pymatgen.io.vasp.outputs import Eigenval, Chgcar, Wavecar
 import os
+from pytheos import utils
 
 
 class CalcModifier:
     """
-    Loads previous VASP calculation files as objects so they can be modified for subsequent calculations.
-    - Some commonly used modifications are provided as methods with reasonable default changes.
-    - Simple modifications can also be performed by just changing this object's attributes.
-        - ex. CalcModifier.incar.update({"NCORE": 24})
+    Class to load previous VASP calculation files to modify them for subsequent, more specific calculations.
 
-    To perform multiple modifications from a single source calc, be sure to reinitialize this class to ensure unintended changes were not applied.
-    - a sanity check is performed if the calc type is not from the "source" to help avoid these mistakes
+    Simpler modifications can also be performed by just changing `CalcModifier` attributes.
+    - e.g. `CalcModifier.incar.update({"NCORE": 24})`
+
+    To perform multiple modifications from a single source calc, be sure to reinitialize this class to
+    ensure unintended changes were not applied. A sanity check is performed if the calculation type is
+    not from the "source" to help avoid these mistakes
 
     Attributes:
         source_dir (str): relative path to source calc directory.
-        type (str): current calculation type - for monitoring progress. Starts with "source".
+        calc_type (str): current calculation type - for monitoring progress. Starts with "source".
         vasprun (Vasprun): Vasprun object from source calc.
         incar (Incar): Incar object from source calc.
         poscar (Poscar): Relaxed structure (CONTCAR) from source calc as a Poscar object.
@@ -34,9 +36,10 @@ class CalcModifier:
         Args:
             source_dir (str): Relative path to source directory from which VASP files will be loaded.
         """
+
         self.source_dir: str = source_dir
-        print(f"Reading source calculation from ./{self.source_dir}")
-        self.type = "source"  # for monitoring
+        print(f"Source calculation loaded ({self.source_dir}).")
+        self.calc_type = "source"  # for monitoring
 
         # contains built-in convergence check (ionic & electronic)
         self.vasprun = load_vasprun(f"{source_dir}/vasprun.xml")
@@ -52,21 +55,21 @@ class CalcModifier:
 
     def to_dos(
         self,
-        user_incar_changes: dict = None,
+        incar_changes: dict = None,
         energy_window: float = 6.0,
     ) -> None:
         """
         Modifies VASP calculation objects for a density of states (DOS) calculation.
 
         Args:
-            user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
+            incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
             energy_window (float, optional): Energy window to calculation DOS from the Fermi level in +/- directions. Defaults to 6.0.
         """
 
         self._run_sanity_check()
 
-        print(f"Modifying calc for density of states")
-        self.type = "dos"
+        print(f"Modifying calculation for density of states.")
+        self.calc_type = "dos"
 
         # due to issue with fermi level placement
         num_elec = self.eigenval.nelect
@@ -94,12 +97,12 @@ class CalcModifier:
             }
         )
 
-        if user_incar_changes:
-            self.incar.update(user_incar_changes)
+        if incar_changes:
+            self.incar.update(incar_changes)
 
     def to_bader(
         self,
-        user_incar_changes: dict = None,
+        incar_changes: dict = None,
     ) -> None:
         """
         Modifies VASP calculation objects for a Bader charge calculation.
@@ -107,13 +110,13 @@ class CalcModifier:
         - for VASP, you need to run the `chgsum.pl` script prior to running `bader` (see in link above)
 
         Args:
-            user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
+            incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
         """
 
         self._run_sanity_check()
 
-        print(f"Modifying calc for bader charge")
-        self.type = "bader"
+        print(f"Modifying calculation for bader charge.")
+        self.calc_type = "bader"
 
         self.chgcar = True
         self.wavecar = True
@@ -127,12 +130,12 @@ class CalcModifier:
             }
         )
 
-        if user_incar_changes:
-            self.incar.update(user_incar_changes)
+        if incar_changes:
+            self.incar.update(incar_changes)
 
     def to_bandstructure(
         self,
-        user_incar_changes: dict = None,
+        incar_changes: dict = None,
         increase_nbands: float = 2,
         sumo_kgen_cmd: str = "sumo-kgen --pymatgen --hybrid",
     ) -> None:
@@ -144,7 +147,7 @@ class CalcModifier:
         - `sumo-bandstats` can be used to evaluate band gaps and effective masses (https://smtg-bham.github.io/sumo/sumo-bandstats.html)
 
         Args:
-            user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
+            incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
             increase_nbands (float, optional): Factor to increase number of bands from source calculation. Defaults to 2.
             sumo_kgen_cmd (str, optional): Sumo command for high-symmetry k-point path generation. Defaults to "sumo-kgen --pymatgen".
 
@@ -154,8 +157,8 @@ class CalcModifier:
 
         self._run_sanity_check()
 
-        print(f"Modifying calc for band structure")
-        self.type = "bandstructure"
+        print(f"Modifying calculation for band structure.")
+        self.calc_type = "bandstructure"
 
         # increase number of bands
         nbands = self.eigenval.nbands
@@ -165,7 +168,7 @@ class CalcModifier:
         if "METAGGA" in self.incar:
             is_metaGGA = True
             print(
-                "Detected a meta-GGA calculation... NSCF calculation will use `GGA = PE`"
+                "Detected a meta-GGA calculation -> NSCF calculation will use `GGA = PE`"
             )
 
             self.ibzkpts = Kpoints.from_file(
@@ -202,13 +205,13 @@ class CalcModifier:
         # for determining high-symmetry k-path
         self.kgen_cmd = sumo_kgen_cmd
 
-        if user_incar_changes:
-            self.incar.update(user_incar_changes)
+        if incar_changes:
+            self.incar.update(incar_changes)
 
     # NOTE that this has been less extensively tested/used than other methods!!
     def to_dielectric(
         self,
-        user_incar_changes: dict = None,
+        incar_changes: dict = None,
         increase_nbands: float = 2,
     ) -> None:
         """
@@ -216,14 +219,14 @@ class CalcModifier:
         - see https://www.vasp.at/wiki/index.php/Dielectric_properties_of_SiC for more information
 
         Args:
-            user_incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
+            incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
             increase_nbands (float, optional): Factor to increase number of bands from source calculation. Defaults to 2.
         """
 
         self._run_sanity_check()
 
-        print(f"Modifying calc for dielectric")
-        self.type = "dielectric"
+        print(f"Modifying calculation for dielectric function.")
+        self.calc_type = "dielectric"
 
         self.chgcar = True
         self.wavecar = True
@@ -243,8 +246,8 @@ class CalcModifier:
             }
         )
 
-        if user_incar_changes:
-            self.incar.update(user_incar_changes)
+        if incar_changes:
+            self.incar.update(incar_changes)
 
     def write_files(
         self,
@@ -252,7 +255,7 @@ class CalcModifier:
         copy_submit_script: bool = True,
     ) -> None:
         """
-        Write current CalcModifier to VASP files.
+        Write current CalcModifier objects to VASP files.
         - A more complex scheme is used for 'bandstructure' type calculations due to need of NSCF calculation.
 
         Args:
@@ -260,7 +263,7 @@ class CalcModifier:
             copy_submit_script (bool): If want to copy same "submitvasp" from source calc. Defaults to True.
         """
 
-        print(f"Writing modified calc to ./{output_dir}")
+        print(f"Writing calculation files ({output_dir}).\n")
 
         os.mkdir(output_dir)
 
@@ -271,13 +274,13 @@ class CalcModifier:
             self.kpoints.write_file(f"{output_dir}/KPOINTS")
 
         # specific scheme for bandstructure calculations
-        if self.type == "bandstructure":
+        if self.calc_type == "bandstructure":
+            print(f"Perform band structure calculations in the following steps ->")
+            print(f"\t1. run NSCF calculation ({output_dir}/nscf).")
             print(
-                f"""\nPerform bandstructure calculations in the following steps...
-    1. run the ./{output_dir}/nscf calculation
-    2. copy the WAVECAR from finished ./{output_dir}/nscf calculation to ./{output_dir}
-    3. run the ./{output_dir} calculation\n"""
+                f"\t2. copy WAVECAR from finished NSCF calculation ({output_dir}/nscf/WAVECAR -> {output_dir}/WAVECAR)."
             )
+            print(f"\t3. run band structure calculation ({output_dir}).\n")
 
             self.ibzkpts.write_file(f"{output_dir}/IBZKPT")
 
@@ -311,37 +314,35 @@ class CalcModifier:
         else:
             if hasattr(self, "chgcar"):
                 os.system(f"cp {self.source_dir}/CHGCAR {output_dir}/CHGCAR")
+
             if hasattr(self, "wavecar"):
                 os.system(f"cp {self.source_dir}/WAVECAR {output_dir}/WAVECAR")
 
+        # only copy over `submitvasp` script if specified
         if copy_submit_script:
             os.system(f"cp {self.source_dir}/submitvasp {output_dir}/submitvasp")
 
+            if self.calc_type == "bandstructure":
+                os.system(
+                    f"cp {self.source_dir}/submitvasp {output_dir}/nscf/submitvasp"
+                )
+
+        return None
+
     def add_chgcar(self) -> None:
-        """Specify chgcar be copied to modified calculation"""
+        """Specify chgcar be copied to modified calculation."""
         self.chgcar = True
 
-    def add_wavecar(self):
-        """Specify wavecar be copied for modified calculation"""
+    def add_wavecar(self) -> None:
+        """Specify wavecar be copied for modified calculation."""
         self.wavecar = True
 
     def _run_sanity_check(self) -> None:
-        """Run a sanity check when CalcModifier methods are attempted for any type other than the inputted 'source' calc"""
+        """Run a sanity check when CalcModifier methods are attempted for any calc_type other than the inputted 'source' calc"""
 
-        if self.type != "source":
+        if self.calc_type != "source":
+            print("\nWARNING!!!")
+            print("You are not modifying from the source calculation initially loaded.")
+            print("You probably want to reinitialize a new CalcModifier...")
 
-            print(
-                "WARNING!!!\nYou are not modifying from the source calculation that was initially loaded"
-            )
-
-            while True:
-                answer = input("Do you want to continue? (yes/no): ").lower()
-                if answer in ["y", "yes"]:
-                    print("Continuing..")
-                    break
-                elif answer in ["n", "no"]:
-                    print("Aborting..")
-                    exit()
-                    break
-                else:
-                    print("Invalid input. Please enter 'yes' or 'no'")
+            utils.check_with_user()

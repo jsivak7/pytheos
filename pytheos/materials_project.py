@@ -5,16 +5,14 @@ from mp_api.client import MPRester
 import pprint
 from dotenv import load_dotenv
 import os
-from pymatgen.io.vasp import Vasprun
 
 
 def _load_api_key():
     """
-    Uses `python-dotenv` package (https://github.com/theskumar/python-dotenv) to automatically
-    load a Materials Project API key assuming the .env file has been set up and exists
-    somewhere within the `pytheos` source files.
+    Load Materials Project API key.
 
-    To set this correctly up on your own machine see `docs/general_tips.md`.
+    Assuming the .env file has been set up and exists somewhere within the
+    `pytheos` source files. To set this up on your own machine see `resources/tips.md`.
 
     Raises:
         ValueError: If MP_API_KEY cannot be loaded.
@@ -78,16 +76,13 @@ def query_entries_across_chemsys(
     Mg, Co and O phases). Very useful for create phase diagrams across the entire chemical space
     (and then calculating relative stability using say decomposition enthalpy).
 
-    *One should ideally supply elements argument using `my_PDEntry.composition.chemical_system` to ensure that
+    *Ideally supply `elements` with `my_PDEntry.composition.chemical_system` to ensure that
     the correct chemical system is queried.*
-
-    Straightforward implementation of mp_api.client.MPRester.get_entries_in_chemsys
-    (https://github.com/materialsproject/api/blob/main/mp_api/client/mprester.py).
 
     Internally handles getting user's MPAPIKey via `_load_api_key()` function.
 
     Args:
-        elements (list): List of elements for chemical system to get entries. Example -> ["Mg", "Co", "O"].
+        elements (list): List of elements for chemical system to get entries. e.g. ["Mg", "Co", "O"].
             Preferentially use -> my_PDEntry.composition.chemical_system
         thermo_type (str, optional): Exchange-Correlation functional used to calculate entries.
             Options are ["GGA_GGA+U", "R2SCAN"]. Defaults to "R2SCAN".
@@ -127,14 +122,11 @@ def query_entries_for_formula(
     in the list if this formula is stable (on the hull) for the thermo_type specified,
     and an empty list otherwise.
 
-    Straightforward implementation of mp_api.client.MPRester.get_entries.
-    (https://github.com/materialsproject/api/blob/main/mp_api/client/mprester.py).
-
     Internally handles getting user's MPAPIKey via `_load_api_key()` function.
 
     Args:
-        formula (str): Chemical formula to get entries. Example -> "CoO"
-            One can also give an mpid. Example -> "mp-1265-r2SCAN"
+        formula (str): Chemical formula to get entries. e.g. "CoO"
+            One can also give an mpid. e.g. "mp-1265-r2SCAN"
         thermo_type (str, optional): Exchange-Correlation functional used to calculate entries.
             Options are ["GGA_GGA+U", "R2SCAN"]. Defaults to "R2SCAN".
         additional_criteria (dict, optional): Additional criteria for entry search. Defaults to None.
@@ -142,6 +134,7 @@ def query_entries_for_formula(
     Returns:
         list: list of ComputedStructureEntries
     """
+
     apikey = _load_api_key()
 
     criteria = {"thermo_types": [thermo_type]}
@@ -156,35 +149,3 @@ def query_entries_for_formula(
         )
 
     return entries
-
-
-def apply_mp2020compat(run: Vasprun) -> float:
-    """
-    Applies MP2020Compatbility correction scheme for GGA/GGA+U and anion mixing calculations.
-    - https://docs.materialsproject.org/methodology/materials-methodology/thermodynamic-stability/thermodynamic-stability/anion-and-gga-gga+u-mixing
-
-    Calculation parameters/potcars should be consistent with MPRelaxSet for valid computations.
-    - https://github.com/materialsproject/pymatgen/blob/master/src/pymatgen/io/vasp/MPRelaxSet.yaml
-
-    Args:
-        run (Vasprun): Pymatgen vasprun object. Used preferentially over raw energies to ensure
-            scheme is implemented correctly for a given material system and calculation specs.
-
-    Returns:
-        float: Corrected energy in eV/atom
-    """
-    from pymatgen.entries.compatibility import MaterialsProject2020Compatibility
-    import numpy as np
-
-    v = run.get_computed_entry()
-
-    # get original energy in eV/atom
-    energy_og = v.energy / len(v.structxure)
-    print(f"original energy = {np.round(energy_og, 4)}/atom")
-
-    # calculate corrected energy with MP2020Compatibility corrections
-    v.energy_adjustments = MaterialsProject2020Compatibility().get_adjustments(v)
-    energy_mp2020 = v.energy / len(v.structure)
-    print(f"corrected energy = {np.round(energy_mp2020, 4)}/atom")
-
-    return energy_mp2020

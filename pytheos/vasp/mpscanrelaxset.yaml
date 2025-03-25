@@ -1,0 +1,45 @@
+# customized MPScanRelaxSet based on experience with HEOs
+
+ALGO: All
+EDIFF: 1e-06
+EDIFFG: -0.020
+ISYM: 0
+ISIF: 3 # full relax
+ISMEAR: 0
+KPAR: 1
+KSPACING: 0.25
+LAECHG: False
+LCHARG: True
+LELF: False
+LVTOT: False
+LWAVE: True
+MAGMOM: { # just some defaults made based on projects over the years
+  "Mg": 0,
+  "Ca": 0,
+  "Sc": 0,
+  "Cr": 5,
+  "Mn": 5,
+  "Fe": 5,
+  "Co": 5,
+  "Ni": 5,
+  "Cu": 5,
+  "Zn": 0,
+
+  "Sr": 0,
+  "La": 0,
+  "Ti": 5,
+  "V": 5,
+  "Cr": 5,
+  "Nb": 5,
+  "Mo": 5,
+  "W": 5,
+
+  "O" : 0
+  }
+METAGGA: "R2SCAN"
+NCORE: 32 # for basic cores on PSU Roar Collab, 24 for standard
+NELM: 500
+NSW: 250
+POTIM: 0.25 # 1/2 default for smoother relaxation
+SIGMA: 0.05
+TIME: 0.1 # 1/4 default to assist in electronic convergence - usually needed

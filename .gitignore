@@ -1,8 +1,8 @@
 # User added
 .DS_Store
 **/POTCAR
-/docs/notes.md
-/docs/todo.md
+resources/NOTES.md
+resources/TODO.md
 
 
 # Byte-compiled / optimized / DLL files

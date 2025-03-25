@@ -6,11 +6,13 @@ height="150">
   </picture>
 </h1>
 
-Python toolkit for high-entropy oxide simulations (pytheos) is an open-source package built for exploring chemically disordered crystalline materials with computational models. 
+Python toolkit for high-entropy oxides (pytheos) is an open-source package built for exploring chemically disordered crystalline materials with modern computational tools. 
 
-Density-functional theory calculations are the primary focus of the code currently as they provide very accurate thermodynamic and electronic structure predictions, however other types of simulations and machine-learning approaches will be implemented in the future.
+A variety of other open-source packages such as [pymatgen](https://github.com/materialsproject/pymatgen), [custodian](https://github.com/materialsproject/custodian), and [sumo](https://github.com/SMTG-Bham/sumo) as well as the [Materials Project database](https://next-gen.materialsproject.org/) are heavily utilized to leverage existing computational machinery and data bases.
 
-A variety of other open-source packages such as [pymatgen](https://github.com/materialsproject/pymatgen), [custodian](https://github.com/materialsproject/custodian), and [sumo](https://github.com/SMTG-Bham/sumo) as well as the [Materials Project database](https://next-gen.materialsproject.org/) are heavily utilized to leverage existing computational machinery and data.
+**TODO** add in little DFT/MLIP blurb.
+
+**TODO** add examples of successes here with descriptor definitions.
 
 ## Installation
 1. Clone the repo
@@ -24,7 +26,9 @@ cd pytheos
 pip install -e .
 ```
 
-*Jupyter notebooks are provided to demonstrate how to use the code in the `examples/` folder.*
+*Jupyter notebooks are (will be...) provided to demonstrate how to use the code in the `examples/` folder.*
+
+**TODO** add `pytheos` architect info cause this is kinda cool.
 
 ## Development & Bugs
-In case you run into any issues please contact Jacob via email (jts6114@psu.edu) as this package is under active development (and is still changing very often). Thank you for any suggestions and contributions - I hope that this is useful to your work!
+In case you run into any issues please contact me via email (jts6114@psu.edu) as this package is under active development. Thank you for any suggestions and contributions - I hope that this is useful to your work!

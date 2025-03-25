@@ -1,20 +1,22 @@
-# for evaluting a material's enthalpic stability
+# for evaluting enthalpic stability
+# TODO add in mixing enthalpy calculator
 
 from pymatgen.analysis.phase_diagram import PhaseDiagram, PDEntry
+from pymatgen.io.vasp import Vasprun
 
 
 class EnthalpicStability:
     """
     Class for evaluting the enthalpic stability of a material.
 
-    Useful primarily for calculating relative stability of your target material with respect to the
-    other calculations in your phase diagram (that are usually pulled from the Materials Project database).
+    Useful for calculating relative stability of your target material with respect to the
+    other calculations in phase diagram.
 
     Attributes:
         phase_diagram (PhaseDiagram): Pymatgen PhaseDiagram class with added target entry.
         target_entry_name (str): Name of target entry. Defaults to "my_PDEntry".
-        form (float): Calculated formation enthalpy of target material in eV/atom.
-        decomp (float): Calculated decomposition enthalpy of target material in eV/atom.
+        form_enthalpy (float): Calculated formation enthalpy of target material in eV/atom.
+        decomp_enthalpy (float): Calculated decomposition enthalpy of target material in eV/atom.
         decomp_rxn (str): Decomposition reaction corresponding to the calculated decomposition enthalpy.
     """
 
@@ -31,8 +33,8 @@ class EnthalpicStability:
 
         self.phase_diagram = phase_diagram
         self.target_entry_name = target_entry_name
-        self.form = self._get_formation_enthalpy()
-        self.decomp = self._get_decomposition_enthalpy()
+        self.form_enthalpy = self._get_formation_enthalpy()
+        self.decomp_enthalpy = self._get_decomposition_enthalpy()
         self.decomp_rxn = self._get_decomposition_rxn()
 
     def _find_target_entry(self) -> PDEntry:
@@ -59,9 +61,11 @@ class EnthalpicStability:
         """
 
         target_entry = self._find_target_entry()
-        form_enthalpy = self.phase_diagram.get_form_energy_per_atom(entry=target_entry)
+        self.form_enthalpy = self.phase_diagram.get_form_energy_per_atom(
+            entry=target_entry
+        )
 
-        return form_enthalpy
+        return self.form_enthalpy
 
     def _get_decomposition_enthalpy(self):
         """
@@ -76,11 +80,13 @@ class EnthalpicStability:
         """
 
         target_entry = self._find_target_entry()
-        decomp_enthalpy = self.phase_diagram.get_decomp_and_phase_separation_energy(
-            entry=target_entry
-        )[1]
+        self.decomp_enthalpy = (
+            self.phase_diagram.get_decomp_and_phase_separation_energy(
+                entry=target_entry
+            )[1]
+        )
 
-        return decomp_enthalpy
+        return self.decomp_enthalpy
 
     def _get_decomposition_rxn(self):
         """
@@ -95,7 +101,7 @@ class EnthalpicStability:
             str: Decomposition reaction.
         """
         target_entry = self._find_target_entry()
-        decomp_enthalpy = self.phase_diagram.get_decomp_and_phase_separation_energy(
+        decomp_entries = self.phase_diagram.get_decomp_and_phase_separation_energy(
             entry=target_entry
         )[0]
 
@@ -111,4 +117,39 @@ class EnthalpicStability:
             if decomp_entry != range(len(list(decomp_entries.keys())))[-1]:
                 decomp_rxn += " + "
 
-        return decomp_rxn
+        self.decomp_rxn = decomp_rxn
+
+        return self.decomp_rxn
+
+
+def apply_mp2020compat(run: Vasprun) -> float:
+    """
+    Applies MP2020Compatbility correction scheme for GGA/GGA+U and anion mixing calculations.
+    - https://docs.materialsproject.org/methodology/materials-methodology/thermodynamic-stability/thermodynamic-stability/anion-and-gga-gga+u-mixing
+
+    Calculation parameters/potcars should be consistent with MPRelaxSet for valid computations.
+    - https://github.com/materialsproject/pymatgen/blob/master/src/pymatgen/io/vasp/MPRelaxSet.yaml
+
+    Args:
+        run (Vasprun): Pymatgen vasprun object. Used preferentially over raw energies to ensure
+            scheme is implemented correctly for a given material system and calculation specs.
+
+    Returns:
+        float: Corrected energy in eV/atom
+    """
+
+    from pymatgen.entries.compatibility import MaterialsProject2020Compatibility
+    import numpy as np
+
+    v = run.get_computed_entry()
+
+    # get original energy in eV/atom
+    energy_og = v.energy / len(v.structxure)
+    print(f"original energy = {np.round(energy_og, 4)}/atom")
+
+    # calculate corrected energy with MP2020Compatibility corrections
+    v.energy_adjustments = MaterialsProject2020Compatibility().get_adjustments(v)
+    energy_mp2020 = v.energy / len(v.structure)
+    print(f"corrected energy = {np.round(energy_mp2020, 4)}/atom")
+
+    return energy_mp2020

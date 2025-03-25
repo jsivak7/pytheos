@@ -1,110 +1,216 @@
 # structure generation tools
 
 from ase import Atoms
+import os
+from pymatgen.core import Structure
+from icet import ClusterSpace
+from icet.tools.structure_generation import (
+    generate_sqs_from_supercells,
+    _get_sqs_cluster_vector,
+    occupy_structure_randomly,
+)
+from icet.input_output.logging_tools import set_log_config
 
 
-def make_supercell(
-    struc: Atoms,
-    dimensions: tuple,
-) -> Atoms:
+class StructureGenerator:
     """
-    Make supercell from ASE Atoms object
+    Class for structure generation - usually used to make a supercell, generate special
+    quasi-random structure (SQS), generate randomly decorated structure, or rattle atoms.
 
-    Args:
-        struc (Atoms): structure to be made into a supercell, usually a unit cell
-        dimensions (tuple): (x, y, z) multipliers for supercell generation
+    NOTE that as methods are called, the `structure` attribute is updated.
 
-    Returns:
-        Atoms: ASE Atoms object for supercell
-    """
-    return struc.repeat(dimensions)
-
-
-def make_sqs(
-    struc: Atoms,
-    dimensions: tuple,
-    chemical_symbols: list,
-    cutoffs: list,
-    concentrations: dict,
-    num_steps: int,
-) -> Atoms:
-    """
-    Generate special quasirandom structure (SQS) for an arbitrary input structure using ICET (https://icet.materialsmodeling.org/)
-
-    Args:
-        struc (Atoms): structure to be made into an SQS, usually a unit cell
-        dimensions (tuple): (x, y, z) multipliers for supercell generation
-        chemical_symbols (list): list of lists for allowed elements following same order as unitcell structure, example: [["Sr"], ["Ti", "Cr"], ["O"], ["O"], ["O"]] for perovskite
-        cutoffs (list): cutoffs in order of multiplicity (pair, triplet, quadruplet, etc.)
-        concentrations (dict): fractions of different elements for each lattice site, only need to specify those that are not 1.0
-        num_steps (int): number of Monte Carlo steps to run the SQS generation
-
-    Returns:
-        Atoms: ASE Atoms object for SQS
+    Attributes:
+        structure (Atoms): ASE Atoms structure object.
     """
 
-    import os
-    from icet import ClusterSpace
-    from icet.tools.structure_generation import (
-        generate_sqs_from_supercells,
-        _get_sqs_cluster_vector,
-    )
-    from icet.input_output.logging_tools import set_log_config
+    def __init__(
+        self,
+        structure: Atoms,
+    ):
+        """
+        Args:
+            structure (Atoms): ASE Atoms structure object
+                Usually want to start with a unit cell.
+        """
 
-    set_log_config(level="INFO")
+        self.structure = structure
 
-    supercell = [struc.repeat(dimensions)]
+    def rattle_atoms(self, std_dev=0.02) -> Atoms:
+        """
+        Rattles atoms in structure using ASE - helpful prior to relaxation to break initial symmetry.
 
-    cs = ClusterSpace(struc, cutoffs, chemical_symbols)
-    print(cs)
+        Can enable symmetry-broken atomic arrangements during structure relaxation.
+        - see Zunger group's publications on exploring a 'polymorphous representation' for more
+        details of this approach
 
-    sqs = generate_sqs_from_supercells(
-        cluster_space=cs,
-        supercells=supercell,
-        target_concentrations=concentrations,
-        n_steps=num_steps,
-    )
+        Args:
+            std_dev (float, optional): standard deviation of rattling amount to perform in Angstroms.
+                Defaults to 0.02.
 
-    trial_cluster_vector = cs.get_cluster_vector(sqs)
-    perfectly_random_cluster_vector = _get_sqs_cluster_vector(
-        cluster_space=cs, target_concentrations=concentrations
-    )
+        Returns:
+            Atoms: Rattled structure.
+        """
 
-    print(f"\nTrial Cluster Vector ->\n{trial_cluster_vector}")
-    print(f"\nPerfectly Random Cluster Vector ->\n{perfectly_random_cluster_vector}")
+        import random
 
-    return sqs
+        self.structure.rattle(
+            std_dev,
+            seed=int(random.uniform(0, 2000)),  # random seed
+        )
 
+        return self.structure
 
-def decorate_randomly(
-    struc: Atoms,
-    dimensions: tuple,
-    chemical_symbols: list,
-    concentrations: dict,
-) -> Atoms:
-    """
-    Randomly decorate an arbitrary input structure with ICET (https://icet.materialsmodeling.org/)
+    def make_supercell(
+        self,
+        dimensions: list,
+    ) -> Atoms:
+        """
+        Makes a supercell from structure using ASE.
 
-    Args:
-        struc (Atoms): structure to be made into an randomly decorated structure, usually a unit cell
-        dimensions (tuple): (x, y, z) multipliers for supercell generation
-        chemical_symbols (list): list of lists for allowed elements following same order as unitcell structure, example: [["Sr"], ["Ti", "Cr"], ["O"], ["O"], ["O"]] for perovskite
-        concentrations (dict): fractions of different elements for each lattice site, only need to specify those that are not 1.0
+        Args:
+            dimensions (list): [x, y, z] cell multipliers for supercell generation.
 
-    Returns:
-        Atoms: ASE Atoms object for randomly decorated structure
-    """
+        Returns:
+            Atoms: Supercell structure.
+        """
 
-    import os
-    from icet import ClusterSpace
-    from icet.tools.structure_generation import occupy_structure_randomly
+        supercell = self.structure.repeat(dimensions)
 
-    cs = ClusterSpace(
-        struc, [0], chemical_symbols
-    )  # cutoffs do not matter for random decoration, but needed for cluster space
+        self.structure = supercell
 
-    supercell = struc.repeat(dimensions)
-    occupy_structure_randomly(supercell, cs, concentrations)
-    random = supercell
+        return self.structure
 
-    return random
+    def make_sqs(
+        self,
+        dimensions: list,
+        chemical_symbols,
+        concentrations: dict,
+        cutoffs: list,
+        num_mc_steps: int = 10000,
+    ):
+        """
+        Generates a special quasi-random structure (SQS) using ICET.
+        - https://gitlab.com/materials-modeling/icet
+
+        Args:
+            dimensions (list): [x, y, z] cell multipliers for supercell generation.
+            chemical_symbols (_type_): list of lists for allowed elements following same order as structure.
+                e.g. [["Sr"], ["Ti", "Cr"], ["O"], ["O"], ["O"]] for a perovskite.
+            concentrations (dict): Fractions of different elements for each lattice site.
+                Only need to specify those that are not 1.
+            cutoffs (list): cutoffs in order of multiplicity (pair, triplet, quadruplet, ...).
+            num_mc_steps (int, optional): Number of Monte Carlo steps to run the SQS generation. Defaults to 10000.
+
+        Returns:
+            Atoms: SQS structure.
+        """
+
+        set_log_config(level="INFO")
+
+        cluster_space = ClusterSpace(
+            structure=self.structure,
+            cutoffs=cutoffs,
+            chemical_symbols=chemical_symbols,
+        )
+        print(cluster_space)
+
+        sqs = generate_sqs_from_supercells(
+            cluster_space=cluster_space,
+            supercells=[self.structure.repeat(dimensions)],
+            target_concentrations=concentrations,
+            n_steps=num_mc_steps,
+        )
+
+        trial_cluster_vector = cluster_space.get_cluster_vector(sqs)
+        perfectly_random_cluster_vector = _get_sqs_cluster_vector(
+            cluster_space=cluster_space,
+            target_concentrations=concentrations,
+        )
+
+        print(f"\nTrial Cluster Vector ->\n{trial_cluster_vector}")
+        print(
+            f"\nPerfectly Random Cluster Vector ->\n{perfectly_random_cluster_vector}"
+        )
+
+        self.structure = sqs
+
+        return self.structure
+
+    def decorate_randomly(
+        self,
+        dimensions: list,
+        chemical_symbols: list,
+        concentrations: dict,
+    ):
+        """
+        Randomly decorates structure using ICET.
+        - https://gitlab.com/materials-modeling/icet
+
+        Args:
+            dimensions (list): [x, y, z] cell multipliers for supercell generation.
+            chemical_symbols (_type_): list of lists for allowed elements following same order as structure.
+                e.g. [["Sr"], ["Ti", "Cr"], ["O"], ["O"], ["O"]] for a perovskite.
+            concentrations (dict): Fractions of different elements for each lattice site.
+                Only need to specify those that are not 1.
+
+        Returns:
+            Atoms: Randomly decorated structure.
+        """
+
+        cluster_space = ClusterSpace(
+            structure=self.structure,
+            cutoffs=[0],  # just need something for cluster space construction
+            chemical_symbols=chemical_symbols,
+        )
+
+        randomly_decorated_structure = self.structure.repeat(dimensions)
+
+        occupy_structure_randomly(
+            structure=randomly_decorated_structure,
+            cluster_space=cluster_space,
+            target_concentrations=concentrations,
+        )
+
+        self.structure = randomly_decorated_structure
+
+        return self.structure
+
+    def write_structure(
+        self,
+        output_file: str,
+        sort: bool = True,
+        overwrite: bool = False,
+    ) -> None:
+        """
+        Writes structure to file.
+
+        Args:
+            output_file (str, optional): Output file name - include path and file type. e.g. "../material.vasp".
+            sort (bool, optional): Sort elements in by electronegativity using Pymatgen. Defaults to True.
+            overwrite (bool, optional): Overwrite over already made file. Defaults to False.
+
+        Raises:
+            FileExistsError: If supplied file_name already exists to ensure that previously
+                generated structures are not overwritten.
+
+        Returns:
+            None: Writes structure to file.
+        """
+
+        from ase.io import write
+
+        if os.path.exists(output_file) and overwrite == False:
+            raise FileExistsError(output_file)
+
+        if sort == True:
+            struc_pmg = Structure.from_ase_atoms(self.structure)
+            struc_pmg.sort()
+            self.structure = struc_pmg.to_ase_atoms()
+
+        if "vasp" in output_file or "poscar" in output_file:
+            write(output_file, self.structure, direct=True)
+
+        else:
+            write(output_file, self.structure)
+
+        return None

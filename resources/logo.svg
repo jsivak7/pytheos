@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 791.75 302">
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 799.65 302">
   <defs>
     <style>
       .cls-1, .cls-2 {
@@ -123,6 +123,33 @@
   <circle class="cls-4" cx="631.15" cy="208.19" r="9"/>
   <circle class="cls-6" cx="661.15" cy="178.19" r="8.25"/>
   <circle class="cls-5" cx="661.15" cy="208.19" r="6.75"/>
-  <text class="cls-7" transform="translate(676 214.25)"><tspan x="0" y="0">s</tspan></text>
   <text class="cls-7" transform="translate(0 214.25)"><tspan x="0" y="0">pyt</tspan></text>
+  <line class="cls-2" x1="699.65" y1="87.7" x2="730.65" y2="87.7"/>
+  <line class="cls-2" x1="699.65" y1="118.7" x2="699.65" y2="87.7"/>
+  <circle class="cls-3" cx="700.15" cy="87.7" r="7.5"/>
+  <line class="cls-2" x1="760.15" y1="87.7" x2="790.15" y2="87.7"/>
+  <line class="cls-2" x1="730.15" y1="87.7" x2="760.15" y2="87.7"/>
+  <circle class="cls-5" cx="730.15" cy="87.7" r="6.75"/>
+  <circle class="cls-3" cx="760.15" cy="87.7" r="7.5"/>
+  <line class="cls-2" x1="700.15" y1="147.7" x2="730.15" y2="147.7"/>
+  <line class="cls-2" x1="790.15" y1="177.7" x2="790.15" y2="147.7"/>
+  <line class="cls-2" x1="699.65" y1="149.7" x2="699.65" y2="118.7"/>
+  <circle class="cls-4" cx="700.15" cy="117.7" r="9"/>
+  <circle class="cls-5" cx="700.15" cy="147.7" r="6.75"/>
+  <line class="cls-2" x1="760.15" y1="147.7" x2="790.15" y2="147.7"/>
+  <line class="cls-2" x1="730.15" y1="147.7" x2="760.15" y2="147.7"/>
+  <circle class="cls-4" cx="760.15" cy="147.7" r="9"/>
+  <line class="cls-2" x1="700.15" y1="207.7" x2="730.15" y2="207.7"/>
+  <line class="cls-2" x1="790.15" y1="207.7" x2="790.15" y2="177.7"/>
+  <circle class="cls-3" cx="790.15" cy="177.7" r="7.5"/>
+  <circle class="cls-5" cx="760.15" cy="207.7" r="6.75"/>
+  <line class="cls-2" x1="760.15" y1="207.7" x2="790.15" y2="207.7"/>
+  <line class="cls-2" x1="730.15" y1="207.7" x2="760.15" y2="207.7"/>
+  <circle class="cls-3" cx="730.15" cy="207.7" r="7.5"/>
+  <circle class="cls-6" cx="700.15" cy="208.7" r="8.25"/>
+  <circle class="cls-6" cx="790.15" cy="147.7" r="8.25"/>
+  <circle class="cls-4" cx="790.15" cy="207.7" r="9"/>
+  <circle class="cls-5" cx="790.15" cy="87.7" r="6.75"/>
+  <circle class="cls-6" cx="790.15" cy="87.7" r="8.25"/>
+  <circle class="cls-3" cx="730.15" cy="147.7" r="7.5"/>
 </svg>
