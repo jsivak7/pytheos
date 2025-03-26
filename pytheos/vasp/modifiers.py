@@ -56,6 +56,7 @@ class CalcModifier:
     def to_dos(
         self,
         incar_changes: dict = None,
+        increase_nbands: float = 1.2,
         energy_window: float = 6.0,
     ) -> None:
         """
@@ -63,6 +64,8 @@ class CalcModifier:
 
         Args:
             incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
+            increase_nbands (float, optional): Factor to increase number of bands from source calculation.
+                Helpful for DOS convergence. Defaults to 1.2.
             energy_window (float, optional): Energy window to calculation DOS from the Fermi level in +/- directions. Defaults to 6.0.
         """
 
@@ -74,6 +77,10 @@ class CalcModifier:
         # due to issue with fermi level placement
         num_elec = self.eigenval.nelect
         new_num_elec = num_elec - 1 + 0.999999
+
+        # increase number of bands
+        nbands = self.eigenval.nbands
+        new_nbands = int(nbands * increase_nbands)
 
         # for a more reasonable energy window
         efermi = self.vasprun.efermi
@@ -94,6 +101,7 @@ class CalcModifier:
                 "LCHARG": False,  # usually not needed
                 "LWAVE": False,  # usually not needed
                 "NEDOS": 501,  # higher resolution DOS than default
+                "NBANDS": new_nbands,
             }
         )
 
