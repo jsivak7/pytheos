@@ -19,7 +19,7 @@ def write_script(
             Defaults to 3.
 
     Returns:
-        None: `cstdn.py` file written to `./output_path`.
+        None: `cstdn.py` file written to `output_path`.
     """
 
     cstdn_script = f"""# Generic Custodian script for VASP calculation.
@@ -54,12 +54,16 @@ def write_double_relax_script(
     incar_changes_initial: dict = {"KSPACING": 0.50},
     incar_changes_final: dict = {"KSPACING": 0.25},
     max_errors: int = 3,
+    kpoint_meshes: list[tuple, tuple] = None,
 ) -> None:
     """
     Writes a double-relaxation custodian script for VASP calculations.
 
     The `KSPACING` INCAR flag is used to facilitate high-throughput calculations.
     - `KSPACING = 0.25` is a reasonably safe default, but do your own testing.
+    - There is the option to use KPOINTS instead of `KSPACING` by using the `kpoint_meshes`
+        argument. An internal check is performed to ensure that both are not used in tandem,
+        which should not be done.
 
     Using a less dense k-mesh for the initial relaxation (larger KSPACING) can be very
     beneficial to get closer to a structural minima at a drastically reduced cost.
@@ -79,12 +83,24 @@ def write_double_relax_script(
             Defaults to {"KSPACING": 0.25}.
         max_errors (int, optional): Maximum number of allowed errors handled by Custodian.
             Defaults to 3.
+        kpoint_meshes (list[tuple, tuple], optional): list of k-point meshes for initial and final
+            relaxations. Should not be used with `KSPACING` (i.e. set incar_changes_* to empty
+            dictionaries: "{}"). Defaults to None.
+
+    Raises:
+        ValueError: if both `KSPACING` and KPOINTS are attempted.
 
     Returns:
-        None: `cstdn.py` file written to `./output_path`.
+        None: `cstdn.py` file written to `output_path`.
     """
 
-    cstdn_script = f"""# Custodian double-relaxation script for VASP calculation.
+    if kpoint_meshes:
+        if "KSPACING" in incar_changes_initial or "KSPACING" in incar_changes_final:
+            raise ValueError(
+                "Detected use of both KSPACING and KPOINTS file in Custodian writer."
+            )
+
+        cstdn_script = f"""# Custodian double-relaxation script for VASP calculation using KPOINTS.
 
 import os
 from custodian.custodian import Custodian
@@ -99,7 +115,8 @@ step1 = VaspJob(
     final=False,
     suffix=".1",
     settings_override=[
-        {{"dict": "INCAR", "action": {{"_set": {{{incar_changes_initial}}}}}}}
+        {{"dict": "INCAR", "action": {{"_set": {incar_changes_initial}}}}},
+        {{"dict": "KPOINTS", "action": {{"_set": {{"kpoints": [{kpoint_meshes[0]}]}}}}}},
     ]
 )
 
@@ -107,14 +124,51 @@ step2 = VaspJob(
     vasp_cmd={vasp_cmd_final}, 
     final=True,
     settings_override=[
-        {{"dict": "INCAR", "action": {{"_set": {{{incar_changes_final}}}}}}},
+        {{"dict": "INCAR", "action": {{"_set": {incar_changes_final}}}}},
+        {{"dict": "KPOINTS", "action": {{"_set": {{"kpoints": [{kpoint_meshes[1]}]}}}}}},
         {{"file": "CONTCAR", "action": {{"_file_copy": {{"dest": "POSCAR"}}}}}}
     ]
 )
 
 jobs = [step1, step2]
 
-c = Custodian(handlers, jobs, max_errors=3)
+c = Custodian(handlers, jobs, max_errors={max_errors})
+
+c.run()
+"""
+
+    else:
+        cstdn_script = f"""# Custodian double-relaxation script for VASP calculation using KSPACING.
+
+import os
+from custodian.custodian import Custodian
+from custodian.vasp.handlers import VaspErrorHandler
+from custodian.vasp.jobs import VaspJob
+
+subset = list(VaspErrorHandler.error_msgs.keys())
+handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
+
+step1 = VaspJob(
+    vasp_cmd={vasp_cmd_initial}, 
+    final=False,
+    suffix=".1",
+    settings_override=[
+        {{"dict": "INCAR", "action": {{"_set": {incar_changes_initial}}}}},
+    ]
+)
+
+step2 = VaspJob(
+    vasp_cmd={vasp_cmd_final}, 
+    final=True,
+    settings_override=[
+        {{"dict": "INCAR", "action": {{"_set": {incar_changes_final}}}}},
+        {{"file": "CONTCAR", "action": {{"_file_copy": {{"dest": "POSCAR"}}}}}}
+    ]
+)
+
+jobs = [step1, step2]
+
+c = Custodian(handlers, jobs, max_errors={max_errors})
 
 c.run()
 """

@@ -1,8 +1,72 @@
-# module to facilitate vasp calculation outputs
+# for getting data from VASP calculation outputs
 # see https://www.vasp.at/wiki/index.php/The_VASP_Manual
-# TODO make CalcOutputs class with some common outputs I use as attributes
+
 from pymatgen.io.vasp import Vasprun
 from pandas import DataFrame
+
+
+class CalcOutputs:
+    """
+    Class to hold common output data from VASP calculations.
+
+    Attributes:
+        source_dir (str): Relative path to source directory from which VASP files will be loaded.
+            Defaults to "".
+        vasprun (Vasprun): Pymatgen Vasprun object.
+        structure (Structure): Final structure as a Pymatgen Structure object.
+        num_atoms (int): Number of atoms.
+        volume (float): Final volume of structure in Angstroms^3.
+        lattice_parameters (tuple): Final lattice parameters (a, b, c) in Angstroms.
+        lattice_angles (tuple): Final lattice angles (alpha, beta, gamma), in degrees.
+        composition (Composition): Pymatgen Composition object. Example - "Mg8 O8".
+        chemical_system (str): Chemical system of structure. Example - "Mg-Co-O".
+        final_energy (float): Final energy in eV.
+        final_energy_per_atom (float): Final energy per atom in eV/atom.
+        band_gap (float): Electronic band gap in eV.
+        fermi_energy (float): Fermi energy in eV.
+        cbm (float): Conduction band minima (CBM) in eV.
+        vbm (float): Valence band maxima (VBM) in eV.
+    """
+
+    def __init__(self, source_dir: str = "") -> None:
+        """
+        Args:
+            source_dir (str, optional): Relative path to source directory from which VASP files will be loaded.
+                Defaults to "".
+        """
+
+        self.source_dir: str = source_dir
+        print(f"Calculation outputs loaded ({self.source_dir}vasprun.xml).")
+
+        # contains built-in convergence check (ionic & electronic)
+        self.vasprun = load_vasprun(f"{self.source_dir}/vasprun.xml")
+
+        self.structure = self.vasprun.final_structure
+        self.num_atoms = self.structure.num_sites
+        self.volume = self.structure.volume
+        self.lattice_parameters = (
+            self.structure.lattice.a,
+            self.structure.lattice.b,
+            self.structure.lattice.c,
+        )
+        self.lattice_angles = (
+            self.structure.lattice.alpha,
+            self.structure.lattice.beta,
+            self.structure.lattice.gamma,
+        )
+
+        self.composition = self.structure.composition
+        self.chemical_system = self.structure.composition.chemical_system
+
+        self.final_energy = self.vasprun.final_energy  # in eV
+        self.final_energy_per_atom = self.final_energy / self.num_atoms
+
+        self.band_gap = self.vasprun.eigenvalue_band_properties[0]
+        self.fermi_energy = self.vasprun.efermi
+        self.cbm = self.vasprun.eigenvalue_band_properties[1]
+        self.vbm = self.vasprun.eigenvalue_band_properties[2]
+
+        return None
 
 
 def load_vasprun(
@@ -11,8 +75,7 @@ def load_vasprun(
     parse_eigen: bool = True,
 ) -> Vasprun:
     """
-    Loads vasprun.xml file for further analyses. This is a very powerful class that can be used to get most common data from VASP calculations.
-    - https://github.com/materialsproject/pymatgen/blob/master/src/pymatgen/io/vasp/outputs.py
+    Loads vasprun.xml VASP output file.
 
     Args:
         path (str, optional): Relative path for *.xml file. Defaults to "vasprun.xml".
@@ -74,10 +137,10 @@ def run_bader_analysis(
 
     os.system(f"{chgsum_path} AECCAR0 AECCAR2")
     os.system(f"{bader_path} CHGCAR -ref CHGCAR_sum")
-    convert_baderACF_to_csv()
+    _convert_baderACF_to_csv()
 
 
-def convert_baderACF_to_csv() -> None:
+def _convert_baderACF_to_csv() -> None:
     """
     Converts the ACF.dat output file from VASP Bader charge analysis to a .csv file with the name ACF.csv
     - https://theory.cm.utexas.edu/henkelman/code/bader/

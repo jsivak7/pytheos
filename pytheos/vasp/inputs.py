@@ -12,6 +12,7 @@ import os
 import yaml
 from pymatgen.core import Structure
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet
+from pymatgen.io.vasp.inputs import Kpoints
 import numpy as np
 import random
 from pytheos import utils
@@ -19,16 +20,23 @@ from pytheos import utils
 
 class CalcInputs:
     """
-    Class for VASP calculation input file generation (INCAR, POSCAR, POTCAR).
+    Class for VASP calculation input file generation INCAR, POSCAR, POTCAR, KPOINTS (if specified).
 
     The `KSPACING` INCAR flag is used for k-point generation instead of a KPOINTS file
-    to faciliate high-throughput calculations.
+    to faciliate high-throughput calculations. If a `kpoint_mesh` is supplied, a KPOINTS file can still
+    be written, however, and the `KSPACING` tag in the INCAR will be removed.
 
     Attributes:
         structure (Atoms): Initial structure as ASE Atoms.
         mp_input_set (str): Materials Project input set to describe VASP calculation inputs. Currently
             only implemented (& customized) for "MPRelaxSet" and "MPScanRelaxSet". Defaults to "MPScanRelaxSet".
         incar_changes (dict, optional): Specific changes to the INCAR file. Defaults to None.
+        kpoint_mesh (tuple, optional): K-point mesh (if desired over `KSPACING` in INCAR. Gamma-centered.
+                `KSPACING` is removed from INCAR if this is modified. Defaults to None.
+        incar (Incar): Pymatgen INCAR object.
+        poscar (Poscar): Pymatgen POSCAR object.
+        potcar (Potcar): Pymatgen POTCAR object.
+        kpoints (Kpoints): Pymatgen KPOINTS object (if `kpoint_mesh` is specified)
     """
 
     def __init__(
@@ -36,6 +44,7 @@ class CalcInputs:
         structure: Atoms,
         mp_input_set: str = "MPScanRelaxSet",
         incar_changes: dict = None,
+        kpoint_mesh: tuple = None,
     ):
         """
         Args:
@@ -43,6 +52,8 @@ class CalcInputs:
             mp_input_set (str): Materials Project VASP input set to describe calculation inputs. Currently
                 only implemented (& customized) for "MPRelaxSet" and "MPScanRelaxSet". Defaults to "MPScanRelaxSet".
             incar_changes (dict, optional): Specific changes to the INCAR file. Defaults to None.
+            kpoint_mesh (tuple, optional): K-point mesh (if desired over `KSPACING` in INCAR. Gamma-centered.
+                `KSPACING` is removed from INCAR if this is modified. Defaults to None.
 
         Raises:
             Exception: If supplied `mp_input_set` has not been implemented.
@@ -53,6 +64,7 @@ class CalcInputs:
         self.structure = structure
         self.mp_input_set = mp_input_set
         self.incar_changes = incar_changes
+        self.kpoint_mesh = kpoint_mesh
 
         # convert ASE Atoms -> PMG Structure
         self.structure = Structure.from_ase_atoms(self.structure)
@@ -65,11 +77,16 @@ class CalcInputs:
                 incar_settings = yaml.load(f, Loader=yaml.SafeLoader)
         except:
             raise Exception(
-                f"The input set you provided ({self.mp_input_set}) is not implemented in pytheos. Current options are: MPRelaxSet (pbe) or MPScanRelaxSet (r2scan)."
+                f"The input set you provided ({self.mp_input_set}) is not implemented in pytheos.\nCurrent options are: MPRelaxSet (pbe) or MPScanRelaxSet (r2scan)."
             )
 
-        if incar_changes:
-            incar_settings.update(incar_changes)
+        if self.incar_changes:
+            incar_settings.update(self.incar_changes)
+
+        kpoint_settings = None
+        if self.kpoint_mesh:
+            kpoint_settings = Kpoints(kpts=self.kpoint_mesh)
+            incar_settings.update({"KSPACING": None})
 
         # make input files based on specified input set
         if mp_input_set.lower() == "MPRelaxSet".lower():
@@ -77,6 +94,7 @@ class CalcInputs:
                 structure=self.structure,
                 user_incar_settings=incar_settings,
                 user_potcar_functional="PBE",
+                user_kpoints_settings=kpoint_settings,
                 sort_structure=True,
             ).get_input_set()
 
@@ -85,12 +103,16 @@ class CalcInputs:
                 structure=self.structure,
                 user_incar_settings=incar_settings,
                 user_potcar_functional="PBE_54",
+                user_kpoints_settings=kpoint_settings,
                 sort_structure=True,
             ).get_input_set()
 
         self.incar = input_set.incar
         self.poscar = input_set.poscar
         self.potcar = input_set.potcar
+
+        if kpoint_mesh:
+            self.kpoints = input_set.kpoints
 
     def apply_mag_order(
         self,
@@ -204,7 +226,7 @@ class CalcInputs:
         output_dir: str,
     ) -> None:
         """
-        Writes generated VASP input files (INCAR, POSCAR, POTCAR).
+        Writes generated VASP input files: INCAR, POSCAR, POTCAR, KPOINTS (if specified).
 
         Args:
             output_dir (str): Relative directory path to write input files.
@@ -221,5 +243,8 @@ class CalcInputs:
         self.incar.write_file(f"{output_dir}/INCAR")
         self.poscar.write_file(f"{output_dir}/POSCAR")
         self.potcar.write_file(f"{output_dir}/POTCAR")
+
+        if self.kpoints:
+            self.kpoints.write_file(f"{output_dir}/KPOINTS")
 
         return None
