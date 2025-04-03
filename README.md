@@ -8,7 +8,7 @@ height="150">
 
 Python toolkit for high-entropy oxides (pytheos) is an open-source package built for exploring chemically disordered crystalline materials with modern computational tools. 
 
-A variety of other open-source packages such as [pymatgen](https://github.com/materialsproject/pymatgen), [custodian](https://github.com/materialsproject/custodian), and [sumo](https://github.com/SMTG-Bham/sumo) as well as the [Materials Project database](https://next-gen.materialsproject.org/) are heavily utilized to leverage existing computational machinery and data bases.
+Other open-source packages such as [pymatgen](https://github.com/materialsproject/pymatgen), [custodian](https://github.com/materialsproject/custodian), and [sumo](https://github.com/SMTG-Bham/sumo) as well as the [Materials Project database](https://next-gen.materialsproject.org/) are heavily utilized to leverage existing computational machinery and data bases.
 
 **TODO** add in little DFT/MLIP blurb.
 

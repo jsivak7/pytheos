@@ -38,7 +38,6 @@ class CalcModifier:
         """
 
         self.source_dir: str = source_dir
-        print(f"Source calculation loaded ({self.source_dir}).")
         self.calc_type = "source"  # for monitoring
 
         # contains built-in convergence check (ionic & electronic)
@@ -71,7 +70,6 @@ class CalcModifier:
 
         self._run_sanity_check()
 
-        print(f"Modifying calculation for density of states.")
         self.calc_type = "dos"
 
         # due to issue with fermi level placement
@@ -123,7 +121,6 @@ class CalcModifier:
 
         self._run_sanity_check()
 
-        print(f"Modifying calculation for bader charge.")
         self.calc_type = "bader"
 
         self.chgcar = True
@@ -165,7 +162,6 @@ class CalcModifier:
 
         self._run_sanity_check()
 
-        print(f"Modifying calculation for band structure.")
         self.calc_type = "bandstructure"
 
         # increase number of bands
@@ -233,7 +229,6 @@ class CalcModifier:
 
         self._run_sanity_check()
 
-        print(f"Modifying calculation for dielectric function.")
         self.calc_type = "dielectric"
 
         self.chgcar = True
@@ -270,8 +265,6 @@ class CalcModifier:
             output_dir (str): Relative directory path to output files.
             copy_submit_script (bool): If want to copy same "submitvasp" from source calc. Defaults to True.
         """
-
-        print(f"Writing calculation files ({output_dir}).\n")
 
         os.mkdir(output_dir)
 

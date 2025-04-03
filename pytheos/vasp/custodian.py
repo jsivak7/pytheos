@@ -49,56 +49,49 @@ c.run()
 
 def write_double_relax_script(
     output_dir: str = "./",
-    vasp_cmd_initial: tuple = ("srun", "vasp_std"),
-    vasp_cmd_final: tuple = ("srun", "vasp_std"),
-    incar_changes_initial: dict = {"KSPACING": 0.50},
-    incar_changes_final: dict = {"KSPACING": 0.25},
+    vasp_cmds: list[tuple, tuple] = [("srun", "vasp_std"), ("srun", "vasp_std")],
+    incar_changes: list[dict, dict] = [{"KSPACING": 0.50}, {"KSPACING": 0.25}],
     max_errors: int = 3,
     kpoint_meshes: list[tuple, tuple] = None,
 ) -> None:
     """
     Writes a double-relaxation custodian script for VASP calculations.
 
-    The `KSPACING` INCAR flag is used to facilitate high-throughput calculations.
+    The `KSPACING` INCAR flag is used by default to facilitate high-throughput calculations.
     - `KSPACING = 0.25` is a reasonably safe default, but do your own testing.
     - There is the option to use KPOINTS instead of `KSPACING` by using the `kpoint_meshes`
-        argument. An internal check is performed to ensure that both are not used in tandem,
-        which should not be done.
+        argument. An internal check is performed to ensure that both KSPACING and KPOINTS
+        are not used in tandem, which should not be done.
 
     Using a less dense k-mesh for the initial relaxation (larger KSPACING) can be very
     beneficial to get closer to a structural minima at a drastically reduced cost.
-    - https://github.com/hackingmaterials/atomate/issues/19 shows some discussion in this
+    - https://github.com/hackingmaterials/atomate/issues/19 has some discussion on this
 
     Args:
         output_dir (str, optional): Relative path to write `cstdn.py` file.
             Defaults to "./".
-        vasp_cmd_initial (tuple, optional): VASP software command to run first relaxation.
-            Made to be flexible to allow for `vasp_gam` executable for initial relaxations.
-            Defaults to ("srun", "vasp_std").
-        vasp_cmd_final (tuple, optional): VASP software command to run second relaxation.
-            Defaults to ("srun", "vasp_std").
-        incar_changes_initial (_type_, optional): INCAR changes desired for first relaxation.
-            Defaults to {"KSPACING": 0.50}.
-        incar_changes_final (_type_, optional): INCAR changes desired for second relaxation.
-            Defaults to {"KSPACING": 0.25}.
+        vasp_cmds (list[tuple, tuple], optional): VASP software commands to run first and
+            second relaxations. Made to be flexible to allow for `vasp_gam` executable for
+            initial relaxation if larger supercell is used.
+            Defaults to [("srun", "vasp_std"), ("srun", "vasp_std")].
+        incar_changes (list[dict, dict], optional): INCAR changes desired for first and second
+            relaxation. Defaults to [{"KSPACING": 0.50}, {"KSPACING": 0.25}].
         max_errors (int, optional): Maximum number of allowed errors handled by Custodian.
             Defaults to 3.
         kpoint_meshes (list[tuple, tuple], optional): list of k-point meshes for initial and final
-            relaxations. Should not be used with `KSPACING` (i.e. set incar_changes_* to empty
-            dictionaries: "{}"). Defaults to None.
+            relaxations. Should not be used with `KSPACING` (i.e. set `incar_changes` to empty
+            dictionaries: [{}, {}]). Defaults to None.
 
     Raises:
-        ValueError: if both `KSPACING` and KPOINTS are attempted.
+        ValueError: If use of both `KSPACING` and KPOINTS is attempted.
 
     Returns:
-        None: `cstdn.py` file written to `output_path`.
+        None: Custodian script written to `output_path`/`cstdn.py`.
     """
 
     if kpoint_meshes:
-        if "KSPACING" in incar_changes_initial or "KSPACING" in incar_changes_final:
-            raise ValueError(
-                "Detected use of both KSPACING and KPOINTS file in Custodian writer."
-            )
+        if "KSPACING" in incar_changes[0] or "KSPACING" in incar_changes[1]:
+            raise ValueError("Detected use of both KSPACING and KPOINTS file.")
 
         cstdn_script = f"""# Custodian double-relaxation script for VASP calculation using KPOINTS.
 
@@ -111,20 +104,20 @@ subset = list(VaspErrorHandler.error_msgs.keys())
 handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
 
 step1 = VaspJob(
-    vasp_cmd={vasp_cmd_initial}, 
+    vasp_cmd={vasp_cmds[0]}, 
     final=False,
     suffix=".1",
     settings_override=[
-        {{"dict": "INCAR", "action": {{"_set": {incar_changes_initial}}}}},
+        {{"dict": "INCAR", "action": {{"_set": {incar_changes[0]}}}}},
         {{"dict": "KPOINTS", "action": {{"_set": {{"kpoints": [{kpoint_meshes[0]}]}}}}}},
     ]
 )
 
 step2 = VaspJob(
-    vasp_cmd={vasp_cmd_final}, 
+    vasp_cmd={vasp_cmds[1]}, 
     final=True,
     settings_override=[
-        {{"dict": "INCAR", "action": {{"_set": {incar_changes_final}}}}},
+        {{"dict": "INCAR", "action": {{"_set": {incar_changes[1]}}}}},
         {{"dict": "KPOINTS", "action": {{"_set": {{"kpoints": [{kpoint_meshes[1]}]}}}}}},
         {{"file": "CONTCAR", "action": {{"_file_copy": {{"dest": "POSCAR"}}}}}}
     ]
@@ -149,19 +142,19 @@ subset = list(VaspErrorHandler.error_msgs.keys())
 handlers = [VaspErrorHandler(errors_subset_to_catch=subset)]
 
 step1 = VaspJob(
-    vasp_cmd={vasp_cmd_initial}, 
+    vasp_cmd={vasp_cmds[0]}, 
     final=False,
     suffix=".1",
     settings_override=[
-        {{"dict": "INCAR", "action": {{"_set": {incar_changes_initial}}}}},
+        {{"dict": "INCAR", "action": {{"_set": {incar_changes[0]}}}}},
     ]
 )
 
 step2 = VaspJob(
-    vasp_cmd={vasp_cmd_final}, 
+    vasp_cmd={vasp_cmds[1]}, 
     final=True,
     settings_override=[
-        {{"dict": "INCAR", "action": {{"_set": {incar_changes_final}}}}},
+        {{"dict": "INCAR", "action": {{"_set": {incar_changes[1]}}}}},
         {{"file": "CONTCAR", "action": {{"_file_copy": {{"dest": "POSCAR"}}}}}}
     ]
 )

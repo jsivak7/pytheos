@@ -1,19 +1,32 @@
 # slurm submission script writer function for vasp calculations
 # specific for Penn State ROAR COLLAB HPC
 # defaults to using standard cores
-# does not handle open allocation submissions - rarely used now with slower hardware
+# no longer handles open allocation submissions - rarely used now since switched slower hardware
 
 
 def write_vasp_submission(
-    job_name: str = "vasp-calc",
-    output_dir: str = "",
+    job_name: str = "VASP_CALC",
+    output_dir: str = "./",
     num_nodes: int = 1,
     num_cpu: int = 48,
     mem_per_cpu: str = "5000MB",
     runtime: int = 72,
     allocation: str = "ixd4_s_sc",
 ) -> None:
-    print(f"\nWriting submission script for VASP calculation ({output_dir}submitvasp).")
+    """
+    Writes VASP submission script --> `submitvasp`.
+
+    Assumes calculations are being run via a `cstdn.py` script.
+
+    Args:
+        job_name (str, optional): Name for vasp calculation job. Defaults to "VASP_CALC.
+        output_dir (str, optional): Relative directory to write submission script. Defaults to "./".
+        num_nodes (int, optional): Number of nodes. Defaults to 1.
+        num_cpu (int, optional): Number of CPUs per node. Defaults to 48.
+        mem_per_cpu (str, optional): Amount of memory per CPU. Defaults to "5000MB".
+        runtime (int, optional): Run time for job submission. Defaults to 72.
+        allocation (str, optional): Allocation for job to run on. Defaults to "ixd4_s_sc".
+    """
 
     slurm_script = f"""#!/bin/bash
 #SBATCH --nodes={num_nodes}
@@ -38,7 +51,7 @@ conda activate pytheos
 
 python cstdn.py"""
 
-    with open(f"{output_dir}submitvasp", "w+") as f:
+    with open(f"{output_dir}/submitvasp", "w+") as f:
         f.writelines(slurm_script)
 
     return None

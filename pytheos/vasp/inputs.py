@@ -31,7 +31,7 @@ class CalcInputs:
         mp_input_set (str): Materials Project input set to describe VASP calculation inputs. Currently
             only implemented (& customized) for "MPRelaxSet" and "MPScanRelaxSet". Defaults to "MPScanRelaxSet".
         incar_changes (dict, optional): Specific changes to the INCAR file. Defaults to None.
-        kpoint_mesh (tuple, optional): K-point mesh (if desired over `KSPACING` in INCAR. Gamma-centered.
+        kpoint_mesh (tuple, optional): K-point mesh (if desired over `KSPACING` in INCAR. Always Gamma-centered to be safe.
                 `KSPACING` is removed from INCAR if this is modified. Defaults to None.
         incar (Incar): Pymatgen INCAR object.
         poscar (Poscar): Pymatgen POSCAR object.
@@ -58,8 +58,6 @@ class CalcInputs:
         Raises:
             Exception: If supplied `mp_input_set` has not been implemented.
         """
-
-        print("\nSetting up VASP calculation inputs.\n")
 
         self.structure = structure
         self.mp_input_set = mp_input_set
@@ -117,7 +115,7 @@ class CalcInputs:
     def apply_mag_order(
         self,
         magmom_values: dict,
-        mag_order_path: str = "magorder.yaml",
+        mag_order_file: str = "magorder.yaml",
         rattle_amount: float = 0.5,
         coord_decimals: int = 1,
         anion: str = "O",
@@ -132,7 +130,7 @@ class CalcInputs:
 
         Args:
             magmom_values (dict): Magnetic moment values for different elements in Bohr-Magneton.
-            mag_order_path (str, optional): Relative path to .yaml file with desired magnetic ordering.
+            mag_order_file (str, optional): Relative path to .yaml file with desired magnetic ordering.
                 Defaults to "magorder.yaml".
             rattle_amount (float, optional): Amount to rattle (randomly distort) magnetic moments in
                 Bohr-Magneton. Defaults to 0.5.
@@ -146,10 +144,9 @@ class CalcInputs:
         Returns:
             list: Magnetic moments for updated `MAGMOM` in `CalcInputs.incar`.
         """
-        print(f"\nApplying magnetic ordering ({mag_order_path}).")
 
         # load magnetic ordering positions from yaml
-        with open(f"{mag_order_path}", "r") as f:
+        with open(f"{mag_order_file}", "r") as f:
             mag_order_coords = yaml.load(f, Loader=yaml.SafeLoader)
 
         # split supplied magnetic order positions into spin up and spin down
@@ -214,14 +211,12 @@ class CalcInputs:
             print("Sometimes this is expected (e.g. in cation defect calculations).")
             utils.check_with_user()
 
-        print(f"\n{magmoms}")
-
         # update incar attribute with magnetic ordering
         self.incar.update({"MAGMOM": magmoms})
 
         return self.incar.as_dict()["MAGMOM"]
 
-    def write_input_files(
+    def write_files(
         self,
         output_dir: str,
     ) -> None:
@@ -235,8 +230,6 @@ class CalcInputs:
         Returns:
             None: VASP input files written to `output_dir`.
         """
-
-        print(f"\nWriting VASP inputs ({output_dir}).\n")
 
         os.mkdir(output_dir)
 

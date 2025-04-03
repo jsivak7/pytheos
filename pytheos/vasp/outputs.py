@@ -36,7 +36,6 @@ class CalcOutputs:
         """
 
         self.source_dir: str = source_dir
-        print(f"Calculation outputs loaded ({self.source_dir}vasprun.xml).")
 
         # contains built-in convergence check (ionic & electronic)
         self.vasprun = load_vasprun(f"{self.source_dir}/vasprun.xml")
@@ -133,8 +132,6 @@ def run_bader_analysis(
     """
     import os
 
-    print("Running Bader charge analysis.\n")
-
     os.system(f"{chgsum_path} AECCAR0 AECCAR2")
     os.system(f"{bader_path} CHGCAR -ref CHGCAR_sum")
     _convert_baderACF_to_csv()
@@ -214,8 +211,6 @@ def extract_optical_data(run="vasprun.xml", anisotropic=False) -> DataFrame:
     ]
 
     data_all = {}  # will be populated
-
-    print("\nStarting Optical Property Extraction...")
 
     if anisotropic == True:
         print("**anisotropic**")
