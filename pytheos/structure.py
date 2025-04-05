@@ -2,7 +2,6 @@
 
 import os
 import random
-from ase.io import read, write
 from ase import Atoms
 from pymatgen.core import Structure
 from icet import ClusterSpace
@@ -26,6 +25,8 @@ def read_structure(
     Returns:
         Atoms: ASE Atoms object for structure.
     """
+
+    from ase.io import read
 
     structure = read(filename=filename)
     return structure
@@ -53,6 +54,8 @@ def write_structure(
     Returns:
         None: Writes structure to file.
     """
+
+    from ase.io import write
 
     if os.path.exists(output_filename) and overwrite == False:
         raise FileExistsError(output_filename)

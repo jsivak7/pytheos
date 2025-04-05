@@ -13,12 +13,20 @@ We primarily use density functional theory calculations to provide accurate comp
 Other open-source packages such as [pymatgen](https://github.com/materialsproject/pymatgen), [custodian](https://github.com/materialsproject/custodian), and [sumo](https://github.com/SMTG-Bham/sumo) as well as the [Materials Project database](https://next-gen.materialsproject.org/) are heavily utilized to leverage existing computational machinery and databases.
 
 ## Installation
-1. Clone the repo
+1. Create a new python virtual environment and activate it.
+- Requires `conda` (recommend using [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/main) as it is fairly lightweight).
+```
+conda create --name pytheos python=3.12
+conda activate pytheos
+```
+
+2. Clone the repository.
 ```
 git clone https://github.com/jsivak7/pytheos
 cd pytheos 
 ```
-2. Install the package
+
+3. Install the package.
 - `-e` is for installing in editable mode (optional, but recommended).
 ```
 pip install -e .
@@ -33,7 +41,7 @@ In case you run into any issues please contact me via email (jts6114@psu.edu) as
 
 ## Funding
 
-This package is developed within the Materials Research Science and Engineering Center ([MRSEC](https://www.mrsec.psu.edu)) at Penn State [DMR-2011839].
+This package is developed within the Penn State Materials Research Science and Engineering Center [[DMR-2011839](https://www.mrsec.psu.edu)].
 
 <h1 align="center">
   <picture>
