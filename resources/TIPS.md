@@ -48,6 +48,3 @@ mp_api_key = query.load_api_key()
 
 
 ## Machine-Learning Interatomic Potentials (MLIPs)
-
-
-## FEFF for Simulated X-ray Absorption Spectra
