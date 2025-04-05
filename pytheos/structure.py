@@ -35,7 +35,7 @@ def write_structure(
     structure: Atoms,
     output_filename: str,
     overwrite: bool = False,
-    sort_elements: bool = True,
+    sort: bool = True,
 ) -> None:
     """
     Writes ASE Atoms object to file.
@@ -57,7 +57,7 @@ def write_structure(
     if os.path.exists(output_filename) and overwrite == False:
         raise FileExistsError(output_filename)
 
-    if sort_elements == True:
+    if sort == True:
         structure = sort_elements(structure)
 
     if "vasp" in output_filename or "poscar" in output_filename:
