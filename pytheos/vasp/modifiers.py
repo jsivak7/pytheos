@@ -151,6 +151,11 @@ class CalcModifier:
         - `sumo-bandplot` can be used to plot band structures (https://smtg-bham.github.io/sumo/sumo-bandplot.html)
         - `sumo-bandstats` can be used to evaluate band gaps and effective masses (https://smtg-bham.github.io/sumo/sumo-bandstats.html)
 
+        Perform band structure calculations in the following steps ->
+        1. run NSCF calculation (will be GGA for meta-GGA band structure)
+        2. copy WAVECAR from finished NSCF calculation
+        3. run BANDSTRUCTURE calculation
+
         Args:
             incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
             increase_nbands (float, optional): Factor to increase number of bands from source calculation. Defaults to 2.
@@ -276,12 +281,6 @@ class CalcModifier:
 
         # specific scheme for bandstructure calculations
         if self.calc_type == "bandstructure":
-            print(f"Perform band structure calculations in the following steps ->")
-            print(f"\t1. run NSCF calculation ({output_dir}/nscf).")
-            print(
-                f"\t2. copy WAVECAR from finished NSCF calculation ({output_dir}/nscf/WAVECAR -> {output_dir}/WAVECAR)."
-            )
-            print(f"\t3. run band structure calculation ({output_dir}).\n")
 
             self.ibzkpts.write_file(f"{output_dir}/IBZKPT")
 

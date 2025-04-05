@@ -64,8 +64,8 @@ class CalcInputs:
         self.incar_changes = incar_changes
         self.kpoint_mesh = kpoint_mesh
 
-        # convert ASE Atoms -> PMG Structure
-        self.structure = Structure.from_ase_atoms(self.structure)
+        # convert ASE Atoms -> PMG Structure (sorted)
+        self.structure = Structure.from_ase_atoms(self.structure).sort()
 
         # get path to this module + get customized pytheos MP set
         module_dir = os.path.dirname(__file__)
