@@ -28,7 +28,7 @@ class CalcOutputs:
         vbm (float): Valence band maxima (VBM) in eV.
     """
 
-    def __init__(self, source_dir: str = "") -> None:
+    def __init__(self, source_dir: str = "./") -> None:
         """
         Args:
             source_dir (str, optional): Relative path to source directory from which VASP files will be loaded.

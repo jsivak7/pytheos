@@ -2,7 +2,7 @@
 
 from pytheos.vasp.outputs import load_vasprun
 from pymatgen.io.vasp.inputs import Incar, Poscar, Potcar, Kpoints
-from pymatgen.io.vasp.outputs import Eigenval, Chgcar, Wavecar
+from pymatgen.io.vasp.outputs import Eigenval
 import os
 from pytheos import utils
 
