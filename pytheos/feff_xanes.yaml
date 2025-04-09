@@ -1,0 +1,8 @@
+# Only listing the flags that are not the FEFF defaults
+
+COREHOLE: RPA # Random Phase Approximation screened core hole - safer than Final State Rule (FSR) unscreened core hole despite higher cost
+EDGE: K # set edge to calculate - defaults to K-edge
+FMS: 9 # cluster radius for sphere for computing full mltiple scattering - ENSURE CONVERGENCE
+SCF: 7 # control self-consistent potential calculations - ENSURE CONVERGENCE
+S02: 0.0 # amplitude reduction factor - since < 0.1, it is estimated from atomic overlap integrals - default from MPXANESSet
+XANES: 3.7 .04 .1 # for XANES calculations including the atomic background and absolute energies - default from MPXANESSet
