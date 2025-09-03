@@ -8,13 +8,13 @@ def check_with_user() -> None:
     """
 
     while True:
-        answer = input("\nDo you want to continue? (yes/no): ").lower()
+        answer = input("Do you want to continue? (yes/no): ").lower()
         if answer in ["y", "yes"]:
-            print("Continuing...\n")
+            print("Continuing...")
             break
 
         elif answer in ["n", "no"]:
-            print("Aborting...\n")
+            print("Aborting...")
             exit()
             break
 

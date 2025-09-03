@@ -6,7 +6,7 @@ height="150">
   </picture>
 </h1>
 
-Python toolkit for high-entropy oxides (pytheos) is an open-source package built for exploring chemically disordered crystalline materials. 
+Python toolkit for high-entropy oxides (pytheos) is an open-source package built for exploring chemically disordered crystalline materials using computational methods. 
 
 Density functional theory is our primary computational engine as it provides accurate predictions at the electronic and atomic scale. The r<sup>2</sup>SCAN meta-GGA functional is used by default for its improved accuracy over the more commonly used PBE GGA for oxide materials (see [Kothakonda et al.](https://pubs.acs.org/doi/full/10.1021/acsmaterialsau.2c00059) and [Almishal & Sivak et al.](https://www.sciencedirect.com/science/article/pii/S1359645424006396)). Additionally, we have started to implement machine-learning interatomic potentials, which we recently demonstrated have become accurate enough to rapidly screen for novel high-entropy oxides (see [Sivak et al.](https://arxiv.org/abs/2408.06322) and [Almishal et al.](https://arxiv.org/abs/2503.07865)).
 

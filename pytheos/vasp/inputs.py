@@ -1,11 +1,9 @@
 # for generating VASP input files
 
-"""
-Probably will get a `BadInputSetWarning` during POTCAR generation,
-just be sure it matches the expected POTCAR type in warning and move on
+# NOTE - probably will get a `BadInputSetWarning` during POTCAR generation,
+# just be sure it matches the expected POTCAR type in warning and move on...
+# Not 100% sure why this has been occuring, but has been noted by others on github
 
-Not 100% sure why this has been occuring, but has been noted by others on github
-"""
 
 from ase import Atoms
 import os

@@ -25,6 +25,7 @@ def write_xanes_inputs(
     Raises:
         FileExistsError: If output directory already exists
     """
+
     from pymatgen.core import Structure
     from pymatgen.io.feff import sets
     import os
@@ -81,7 +82,9 @@ def write_custodian_script(
         output_dir (str, optional): Relative path to create 'cstdn_feff.py' script. Defaults to ".".
         max_errors (int, optional): Max number of errors for Custodian to try to correct. Defaults to 3.
     """
+
     print(f"Writing FEFF Custodian script to {output_dir}")
+
     custodian_script = f"""# runs the FEFF10 software using Custodian package.
 
 from custodian.custodian import Custodian
@@ -113,6 +116,7 @@ def xmu_dat_to_df(
     Returns:
         pd.DataFrame: Pandas dataframe object of FEFF output data from xmu.dat.
     """
+
     from pymatgen.io.feff import outputs
     import pandas as pd
 

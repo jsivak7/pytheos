@@ -1,241 +1,7 @@
-# structure tools
+# tools for analyzing structures
 
-import os
-import random
 from ase import Atoms
-from pymatgen.core import Structure
-from icet import ClusterSpace
-from icet.tools.structure_generation import (
-    generate_sqs_from_supercells,
-    _get_sqs_cluster_vector,
-    occupy_structure_randomly,
-)
-from icet.input_output.logging_tools import set_log_config
-
-
-def read_structure(
-    filename: str,
-):
-    """
-    Reads in structure file as ASE Atoms object.
-
-    Args:
-        filename (str): Relative path for structure file.
-
-    Returns:
-        Atoms: ASE Atoms object for structure.
-    """
-
-    from ase.io import read
-
-    structure = read(filename=filename)
-    return structure
-
-
-def write_structure(
-    structure: Atoms,
-    output_filename: str,
-    overwrite: bool = False,
-    sort: bool = True,
-) -> None:
-    """
-    Writes ASE Atoms object to file.
-
-    Args:
-        structure (Atoms): ASE Atoms object of structure.
-        output_filename (str, optional): Output file name - include path and file type. e.g. "../material.vasp".
-        overwrite (bool, optional): Overwrite over already made file. Defaults to False.
-        sort_elements (bool, optional): Option to sort elements by electronegativity. Defaults to True.
-
-    Raises:
-        FileExistsError: If supplied output_filename already exists to ensure that previously
-            generated structures are not overwritten.
-
-    Returns:
-        None: Writes structure to file.
-    """
-
-    from ase.io import write
-
-    if os.path.exists(output_filename) and overwrite == False:
-        raise FileExistsError(output_filename)
-
-    if sort == True:
-        structure = sort_elements(structure)
-
-    if "vasp" in output_filename or "poscar" in output_filename:
-        write(output_filename, structure, direct=True)
-
-    else:
-        write(output_filename, structure)
-
-    return None
-
-
-def sort_elements(
-    structure: Atoms,
-) -> Atoms:
-    """
-    Sorts elements by electronegativity using Pymatgen - follows default for VASP POSCAR.
-
-    Args:
-        structure (Atoms): ASE Atoms object of structure.
-
-    Returns:
-        Atoms: ASE Atoms object with sorted structure.
-    """
-
-    structure_pmg = Structure.from_ase_atoms(structure)
-    structure_pmg.sort()
-    structure = structure_pmg.to_ase_atoms()
-
-    return structure
-
-
-def rattle_atoms(
-    structure: Atoms,
-    std_dev=0.01,
-) -> Atoms:
-    """
-    Rattles atoms in structure using ASE - helpful prior to relaxation to break initial symmetry.
-
-    Can enable symmetry-broken atomic arrangements during structure relaxation.
-    - see Zunger group's publications on exploring a 'polymorphous representation' for more
-    details of this approach
-
-    Args:
-        structure (Atoms): ASE Atoms object of structure.
-        std_dev (float, optional): standard deviation of rattling amount to perform in Angstroms.
-            Defaults to 0.01.
-
-    Returns:
-        Atoms: Rattled structure.
-    """
-
-    structure.rattle(
-        std_dev,
-        seed=int(random.uniform(0, 2000)),  # random seed
-    )
-
-    return structure
-
-
-def make_supercell(
-    structure: Atoms,
-    dimensions: list,
-) -> Atoms:
-    """
-    Makes a supercell from structure using ASE.
-
-    Args:
-        structure (Atoms): ASE Atoms object of structure.
-        dimensions (list): [x, y, z] cell multipliers for supercell generation.
-
-    Returns:
-        Atoms: Supercell structure.
-    """
-
-    supercell = structure.repeat(dimensions)
-
-    structure = supercell
-
-    return structure
-
-
-def make_sqs(
-    structure: Atoms,
-    dimensions: list,
-    chemical_symbols,
-    concentrations: dict,
-    cutoffs: list,
-    num_mc_steps: int = 10000,
-) -> Atoms:
-    """
-    Generates a special quasi-random structure (SQS) using ICET.
-    - https://gitlab.com/materials-modeling/icet
-
-    Args:
-        structure (Atoms): ASE Atoms object of structure.
-        dimensions (list): [x, y, z] cell multipliers for supercell generation.
-        chemical_symbols (_type_): list of lists for allowed elements following same order as structure.
-            e.g. [["Sr"], ["Ti", "Cr"], ["O"], ["O"], ["O"]] for a perovskite.
-        concentrations (dict): Fractions of different elements for each lattice site.
-            Only need to specify those that are not 1.
-        cutoffs (list): cutoffs in order of multiplicity (pair, triplet, quadruplet, ...).
-        num_mc_steps (int, optional): Number of Monte Carlo steps to run the SQS generation. Defaults to 10000.
-
-    Returns:
-        Atoms: SQS structure.
-    """
-
-    set_log_config(level="INFO")
-
-    cluster_space = ClusterSpace(
-        structure=structure,
-        cutoffs=cutoffs,
-        chemical_symbols=chemical_symbols,
-    )
-    print(cluster_space)
-
-    sqs = generate_sqs_from_supercells(
-        cluster_space=cluster_space,
-        supercells=[structure.repeat(dimensions)],
-        target_concentrations=concentrations,
-        n_steps=num_mc_steps,
-    )
-
-    trial_cluster_vector = cluster_space.get_cluster_vector(sqs)
-    perfectly_random_cluster_vector = _get_sqs_cluster_vector(
-        cluster_space=cluster_space,
-        target_concentrations=concentrations,
-    )
-
-    print(f"\nTrial Cluster Vector ->\n{trial_cluster_vector}")
-    print(f"\nPerfectly Random Cluster Vector ->\n{perfectly_random_cluster_vector}")
-
-    return sqs
-
-
-def decorate_randomly(
-    structure: Atoms,
-    dimensions: list,
-    chemical_symbols: list,
-    concentrations: dict,
-) -> Atoms:
-    """
-    Randomly decorates structure using ICET.
-    - https://gitlab.com/materials-modeling/icet
-
-    Args:
-        structure (Atoms): ASE Atoms object of structure.
-        dimensions (list): [x, y, z] cell multipliers for supercell generation.
-        chemical_symbols (_type_): list of lists for allowed elements following same order as structure.
-            e.g. [["Sr"], ["Ti", "Cr"], ["O"], ["O"], ["O"]] for a perovskite.
-        concentrations (dict): Fractions of different elements for each lattice site.
-            Only need to specify those that are not 1.
-
-    Returns:
-        Atoms: Randomly decorated structure.
-    """
-
-    cluster_space = ClusterSpace(
-        structure=structure,
-        cutoffs=[0],  # just need something for cluster space construction
-        chemical_symbols=chemical_symbols,
-    )
-
-    randomly_decorated_structure = structure.repeat(dimensions)
-
-    occupy_structure_randomly(
-        structure=randomly_decorated_structure,
-        cluster_space=cluster_space,
-        target_concentrations=concentrations,
-    )
-
-    return randomly_decorated_structure
-
-
-### analysis tools - subject to change since might make a StructureAnalyzer class...
+from pymatgen.core.structure import Structure
 
 
 def get_space_group(
@@ -256,7 +22,7 @@ def get_space_group(
     Returns:
         tuple: (space group symbol, international space group number)
     """
-    from pymatgen.core import Structure
+
     from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
     struc = Structure.from_ase_atoms(struc)
@@ -286,13 +52,15 @@ def get_diffraction_pattern(struc: Atoms, scaled=True) -> dict:
     Returns:
         dict: 2theta values with corresponding intensities
     """
-    from pymatgen.core.structure import Structure
+
     from pymatgen.analysis.diffraction.xrd import XRDCalculator
 
     struc = Structure.from_ase_atoms(struc)
     calculator = XRDCalculator()
+
     pattern = calculator.get_pattern(struc, scaled=scaled)
     diffraction_data = {"2theta": pattern.x, "intensity": pattern.y}
+
     return diffraction_data
 
 
@@ -312,9 +80,11 @@ def get_lattice_parameters(struc: Atoms) -> tuple:
 
     struc = Structure.from_ase_atoms(struc)
     lattice_parameters = struc.lattice.abc
+
     print(f"a = {np.round(lattice_parameters[0], 4)} \u212b")
     print(f"b = {np.round(lattice_parameters[1], 4)} \u212b")
     print(f"c = {np.round(lattice_parameters[2], 4)} \u212b")
+
     return lattice_parameters
 
 
@@ -456,8 +226,11 @@ def get_octahedral_bondangles(
     counter = 0
     tracker_list = []
     atoms1 = []
+    atoms1_species = []
     atoms2 = []
+    atoms2_species = []
     atoms3 = []
+    atoms3_species = []
     bond_angles = []
     bsite_compositions = []
 
@@ -501,10 +274,24 @@ def get_octahedral_bondangles(
                                             counter += 1
 
                                             atoms1.append(atom1)
+                                            atoms1_species.append(
+                                                struc[atom1].species.reduced_formula
+                                            )
                                             atoms2.append(atom2)
+                                            atoms2_species.append(
+                                                struc[atom2].species.reduced_formula
+                                            )
                                             atoms3.append(atom3)
+                                            atoms3_species.append(
+                                                struc[atom3].species.reduced_formula
+                                            )
                                             bond_angles.append(
-                                                struc.get_angle(atom1, atom2, atom3)
+                                                np.round(
+                                                    struc.get_angle(
+                                                        atom1, atom2, atom3
+                                                    ),
+                                                    3,
+                                                )
                                             )
     end_time = time.time()
 
@@ -513,7 +300,15 @@ def get_octahedral_bondangles(
 
     if write_csv == True:
         data = pd.DataFrame(
-            {"atom1": atoms1, "atom2": atom2, "atom3": atoms3, "bondangle": bond_angles}
+            {
+                "atom1": atoms1,
+                "atom1_species": atoms1_species,
+                "atom2": atoms2,
+                "atom2_species": atoms2_species,
+                "atom3": atoms3,
+                "atom3_species": atoms3_species,
+                "bondangle": bond_angles,
+            }
         )
 
         data.to_csv("bondangles.csv", index=False)
