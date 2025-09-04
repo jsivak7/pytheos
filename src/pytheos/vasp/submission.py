@@ -8,10 +8,10 @@ def write_vasp_submission(
     job_name: str = "VASP_CALC",
     output_dir: str = "./",
     num_nodes: int = 1,
-    num_cpu: int = 48,
-    mem_per_cpu: str = "5000MB",
+    num_cpu: int = 64,
+    mem_per_cpu: str = "3500MB",
     runtime: int = 72,
-    allocation: str = "ixd4_s_sc",
+    allocation: str = "sbs5563_bc",
 ) -> None:
     """
     Writes VASP submission script --> `submitvasp`.

@@ -235,7 +235,9 @@ class CalcInputs:
         self.poscar.write_file(f"{output_dir}/POSCAR")
         self.potcar.write_file(f"{output_dir}/POTCAR")
 
-        if self.kpoints:
+        try:
             self.kpoints.write_file(f"{output_dir}/KPOINTS")
+        except AttributeError:
+            pass
 
         return None

@@ -1,7 +1,7 @@
 <h1 align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="resources/pytheos_light.svg">
-    <img alt="Logo" src="resources/pytheos.svg"
+    <img alt="Logo" src="docs/pytheos.svg"
 height="150">
   </picture>
 </h1>
@@ -45,7 +45,7 @@ This package is supported by the Penn State MRSEC [[DMR-2011839](https://www.mrs
 
 <h1 align="center">
   <picture>
-    <img alt="Logo" src="resources/mrsec.png"
+    <img alt="Logo" src="docs/mrsec_logo.png"
 height="150">
   </picture>
 </h1>

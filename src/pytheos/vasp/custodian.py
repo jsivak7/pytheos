@@ -1,6 +1,8 @@
 # custodian script writer functions for vasp calculations
 # https://github.com/materialsproject/custodian
 
+import os
+
 
 def write_script(
     output_dir: str = "./",
@@ -131,6 +133,9 @@ c.run()
 """
 
     else:
+        if os.path.exists(f"{output_dir}/KPOINTS"):
+            raise ValueError("Detected use of both KSPACING and KPOINTS file.")
+
         cstdn_script = f"""# Custodian double-relaxation script for VASP calculation using KSPACING.
 
 import os
