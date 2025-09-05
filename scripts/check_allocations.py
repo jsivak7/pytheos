@@ -1,5 +1,4 @@
-# generic script that can be customized for evaluating use on SLURM allocations
-# last edited on 2025-03-25
+# generic script that can be customized for evaluating use on Roar Collab Slurm allocations
 # NOTE that this line and those above it should be removed before use
 
 #!/storage/work/jts6114/software/miniconda3/bin/python

@@ -1,9 +1,7 @@
 # Tips
 
-*Last edited on March 24, 2025*
-
 ## Structure Generation & Analysis
-
+#TODO
 
 ## VASP Calculations
 ### Meta-GGA band structure calculations
@@ -15,7 +13,7 @@ Band structures can be calculated for r2scan meta-gga in the following manner (a
 
 A pbe wavecar is needed for meta-gga bandstructure calculations otherwise there are very spiky bandstructures (which I also found documented on a google search). This methodology is recommended for meta-gga and hybrid functionals on the VASP Wiki, however I added in the ICHARG = 11 portion. This allows the magnetic state that is found from r2scan to still be realized in the pbe wavecar if the electronic structure is qualitatively different between the two functionals which is what we usually have with our heo calculations.
 
-This all is handled internally using the `pytheos.vasp.modifier.CalcModifier` class to make band structure calculation inputs.
+This all is handled internally using the `pytheos.vasp.modifiers.CalcModifier` class to make band structure calculation inputs.
 
 ## Materials Project
 
@@ -45,6 +43,7 @@ mp_api_key = query.load_api_key()
 ```
 
 ## Stability
-
+#TODO
 
 ## Machine-Learning Interatomic Potentials (MLIPs)
+#TODO
