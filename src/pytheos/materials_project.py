@@ -7,34 +7,6 @@ from dotenv import load_dotenv
 import os
 
 
-def _load_api_key():
-    """
-    Load Materials Project API key.
-
-    Assuming the .env file has been set up and exists somewhere within the
-    `pytheos` source files. To set this up on your own machine see `resources/tips.md`.
-
-    Raises:
-        ValueError: If MP_API_KEY cannot be loaded.
-
-    Returns:
-        str: User's MP API key for accessing the Materials Project API.
-    """
-
-    load_dotenv()
-
-    mp_api_key = os.getenv("MP_API_KEY")
-
-    if mp_api_key:
-        pass
-    else:
-        raise FileNotFoundError(
-            """Materials Project API key could not be loaded. Have you set up a `.env` file??"""
-        )
-
-    return mp_api_key
-
-
 def get_db_version() -> str:
     """
     Gets Materials Project database version.
@@ -64,6 +36,7 @@ def print_query_fields() -> None:
 
 def query_entries_across_chemsys(
     elements: list,
+    api_key: str,
     thermo_type: str = "R2SCAN",
     additional_criteria: dict = None,
 ) -> list:
@@ -78,11 +51,10 @@ def query_entries_across_chemsys(
     *Ideally supply `elements` with `my_PDEntry.composition.chemical_system` to ensure that
     the correct chemical system is queried.*
 
-    Internally handles getting user's MPAPIKey via `_load_api_key()` function.
-
     Args:
         elements (list): List of elements for chemical system to get entries. e.g. ["Mg", "Co", "O"].
             Preferentially use -> my_PDEntry.composition.chemical_system
+        api_key (str): Materials Project API key.
         thermo_type (str, optional): Exchange-Correlation functional used to calculate entries.
             Options are ["GGA_GGA+U", "R2SCAN"]. Defaults to "R2SCAN".
         additional_criteria (dict, optional): Additional criteria for entry search. Defaults to None.
@@ -91,14 +63,12 @@ def query_entries_across_chemsys(
         list: list of ComputedStructureEntries
     """
 
-    apikey = _load_api_key()
-
     criteria = {"thermo_types": [thermo_type]}
 
     if additional_criteria:
         criteria.update(additional_criteria)
 
-    with MPRester(api_key=apikey) as mpr:
+    with MPRester(api_key=api_key) as mpr:
         entries = mpr.get_entries_in_chemsys(
             elements=elements,
             additional_criteria=criteria,
@@ -109,6 +79,7 @@ def query_entries_across_chemsys(
 
 def query_entries_for_formula(
     formula: str,
+    api_key: str,
     thermo_type: str = "R2SCAN",
     additional_criteria: dict = None,
 ) -> list:
@@ -121,11 +92,10 @@ def query_entries_for_formula(
     in the list if this formula is stable (on the hull) for the thermo_type specified,
     and an empty list otherwise.
 
-    Internally handles getting user's MPAPIKey via `_load_api_key()` function.
-
     Args:
         formula (str): Chemical formula to get entries. e.g. "CoO"
             One can also give an mpid. e.g. "mp-1265-r2SCAN"
+        api_key (str): Materials Project API key.
         thermo_type (str, optional): Exchange-Correlation functional used to calculate entries.
             Options are ["GGA_GGA+U", "R2SCAN"]. Defaults to "R2SCAN".
         additional_criteria (dict, optional): Additional criteria for entry search. Defaults to None.
@@ -134,14 +104,12 @@ def query_entries_for_formula(
         list: list of ComputedStructureEntries
     """
 
-    apikey = _load_api_key()
-
     criteria = {"thermo_types": [thermo_type]}
 
     if additional_criteria:
         criteria.update(additional_criteria)
 
-    with MPRester(api_key=apikey) as mpr:
+    with MPRester(api_key=api_key) as mpr:
         entries = mpr.get_entries(
             chemsys_formula_mpids=formula,
             additional_criteria=criteria,
