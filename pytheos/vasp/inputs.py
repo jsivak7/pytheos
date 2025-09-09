@@ -1,9 +1,4 @@
-# for generating VASP input files
-
-# NOTE - probably will get a `BadInputSetWarning` during POTCAR generation,
-# just be sure it matches the expected POTCAR type in warning and move on...
-# Not 100% sure why this has been occuring, but has been noted by others on github
-
+# for VASP input files generation
 
 from ase import Atoms
 import os
@@ -18,40 +13,23 @@ from pytheos import utils
 
 class CalcInputs:
     """
-    Class for VASP calculation input file generation INCAR, POSCAR, POTCAR, KPOINTS (if specified).
+    Class for generating VASP input files: INCAR, POSCAR, POTCAR, KPOINTS (if specified).
 
-    The `KSPACING` INCAR flag is used for k-point generation instead of a KPOINTS file
-    to faciliate high-throughput calculations. If a `kpoint_mesh` is supplied, a KPOINTS file can still
-    be written, however, and the `KSPACING` tag in the INCAR will be removed.
+    The KSPACING tag is used instead of a KPOINTS file by default. A KPOINTS file can still be used by calling the `use_kpoints()` method.
 
     Attributes:
         structure (Atoms): Initial structure as ASE Atoms.
-        mp_input_set (str): Materials Project input set to describe VASP calculation inputs. Currently
-            only implemented (& customized) for "MPRelaxSet" and "MPScanRelaxSet". Defaults to "MPScanRelaxSet".
-        incar_changes (dict, optional): Specific changes to the INCAR file. Defaults to None.
-        kpoint_mesh (tuple, optional): K-point mesh (if desired over `KSPACING` in INCAR. Always Gamma-centered to be safe.
-                `KSPACING` is removed from INCAR if this is modified. Defaults to None.
+        mp_input_set (str): Materials Project input set for VASP calculations.
         incar (Incar): Pymatgen INCAR object.
         poscar (Poscar): Pymatgen POSCAR object.
         potcar (Potcar): Pymatgen POTCAR object.
-        kpoints (Kpoints): Pymatgen KPOINTS object (if `kpoint_mesh` is specified)
     """
 
-    def __init__(
-        self,
-        structure: Atoms,
-        mp_input_set: str = "MPScanRelaxSet",
-        incar_changes: dict = None,
-        kpoint_mesh: tuple = None,
-    ):
+    def __init__(self, structure: Atoms, mp_input_set: str = "MPScanRelaxSet"):
         """
         Args:
             structure (Atoms): Initial structure as ASE Atoms.
-            mp_input_set (str): Materials Project VASP input set to describe calculation inputs. Currently
-                only implemented (& customized) for "MPRelaxSet" and "MPScanRelaxSet". Defaults to "MPScanRelaxSet".
-            incar_changes (dict, optional): Specific changes to the INCAR file. Defaults to None.
-            kpoint_mesh (tuple, optional): K-point mesh (if desired over `KSPACING` in INCAR. Gamma-centered.
-                `KSPACING` is removed from INCAR if this is modified. Defaults to None.
+            mp_input_set (str): Materials Project VASP input set for VASP calculations. Options are: "MPRelaxSet" or "MPScanRelaxSet". Defaults to "MPScanRelaxSet".
 
         Raises:
             Exception: If supplied `mp_input_set` has not been implemented.
@@ -59,10 +37,8 @@ class CalcInputs:
 
         self.structure = structure
         self.mp_input_set = mp_input_set
-        self.incar_changes = incar_changes
-        self.kpoint_mesh = kpoint_mesh
 
-        # convert ASE Atoms -> PMG Structure (sorted)
+        # convert ASE Atoms to PMG Structure and sort
         self.structure = Structure.from_ase_atoms(self.structure).sort()
 
         # get path to this module + get customized pytheos MP set
@@ -76,22 +52,12 @@ class CalcInputs:
                 f"The input set you provided ({self.mp_input_set}) is not implemented in pytheos.\nCurrent options are: MPRelaxSet (pbe) or MPScanRelaxSet (r2scan)."
             )
 
-        if self.incar_changes:
-            incar_settings.update(self.incar_changes)
-
-        kpoint_settings = None
-        if self.kpoint_mesh:
-            kpoint_settings = Kpoints(kpts=self.kpoint_mesh)
-            incar_settings.update({"KSPACING": None})
-
-        # make input files based on specified input set
+        # make inputs based on specified input set
         if mp_input_set.lower() == "MPRelaxSet".lower():
             input_set = MPRelaxSet(
                 structure=self.structure,
                 user_incar_settings=incar_settings,
                 user_potcar_functional="PBE",
-                user_kpoints_settings=kpoint_settings,
-                sort_structure=True,
             ).get_input_set()
 
         elif mp_input_set.lower() == "MPScanRelaxSet".lower():
@@ -99,17 +65,47 @@ class CalcInputs:
                 structure=self.structure,
                 user_incar_settings=incar_settings,
                 user_potcar_functional="PBE_54",
-                user_kpoints_settings=kpoint_settings,
-                sort_structure=True,
             ).get_input_set()
 
         self.incar = input_set.incar
         self.poscar = input_set.poscar
         self.potcar = input_set.potcar
 
-        if kpoint_mesh:
-            self.kpoints = input_set.kpoints
+    def update_incar(self, changes: dict) -> None:
+        """
+        Updates the generated INCAR for desired user changes.
 
+        Args:
+            changes (dict): changes for INCAR (ex. {"ALGO": "Normal"})
+
+        Returns:
+            None
+        """
+
+        self.incar.update(changes)
+
+        return None
+
+    def use_kpoints(self, kpoint_mesh: list) -> None:
+        """
+        Generates a kpoints attribute to use a KPOINTS file instead of KSPACING tag in INCAR.
+
+        Args:
+            kpoint_mesh (list): k-points mesh - always Gamma centered to be safe (ex. [4, 4, 4])
+
+        Returns:
+            None
+        """
+
+        kpoints = Kpoints(kpts=kpoint_mesh)
+        self.kpoints = kpoints
+
+        # KSPACING is removed from INCAR to ensure both are not used
+        self.incar.pop("KSPACING")
+
+        return None
+
+    # TODO check this...
     def apply_mag_order(
         self,
         magmom_values: dict,
@@ -214,20 +210,18 @@ class CalcInputs:
 
         return self.incar.as_dict()["MAGMOM"]
 
-    def write_files(
-        self,
-        output_dir: str,
-    ) -> None:
+    def write_files(self, output_dir: str) -> None:
         """
         Writes generated VASP input files: INCAR, POSCAR, POTCAR, KPOINTS (if specified).
 
         Args:
-            output_dir (str): Relative directory path to write input files.
-                A new directory is created.
+            output_dir (str): Relative directory path to write input files. A new directory is created.
 
         Returns:
             None: VASP input files written to `output_dir`.
         """
+
+        self._check_kpoints_kspacing()
 
         os.mkdir(output_dir)
 
@@ -241,3 +235,79 @@ class CalcInputs:
             pass
 
         return None
+
+    def _check_kpoints_kspacing(self) -> None:
+        """
+        Sanity check to ensure both KPOINTS and KSPACING are not used together.
+
+        Raises:
+            Exception: If both KPOINTS and KSPACING are being used.
+
+        Returns:
+            None
+        """
+
+        if "KSPACING" in self.incar and hasattr(self, "kpoints"):
+            raise Exception(
+                "You tried to use both KPOINTS and KSPACING - you should only have one set!"
+            )
+
+        return None
+
+
+def write_submission_script(
+    job_name: str,
+    output_dir: str,
+    num_nodes: int = 1,
+    num_cpu: int = 64,
+    mem_per_cpu: str = "3500MB",
+    runtime: int = 72,
+    allocation: str = "sbs5563_bc",
+) -> None:
+    """
+    Writes a SLURM submission script called "submitvasp".
+
+    Assumed calculations are being run via a `cstdn.py` script.
+
+    Specific for PennState RoarCollab HPC...
+
+    Args:
+        job_name (str): Name for job.
+        output_dir (str): Relative directory to write submission script.
+        num_nodes (int, optional): Number of nodes. Defaults to 1.
+        num_cpu (int, optional): Number of CPUs per node. Defaults to 64.
+        mem_per_cpu (str, optional): Amount of memory per CPU. Defaults to "3500MB".
+        runtime (int, optional): Run time for job. Defaults to 72.
+        allocation (str, optional): Allocation to run on. Defaults to "sbs5563_bc".
+
+    Returns:
+        None
+    """
+
+    slurm_script = f"""#!/bin/bash
+#SBATCH --nodes={num_nodes}
+#SBATCH --ntasks-per-node={num_cpu}
+#SBATCH --mem-per-cpu={mem_per_cpu}
+#SBATCH --time={runtime}:00:00
+#SBATCH --partition=sla-prio
+#SBATCH --account={allocation}
+#SBATCH --output=slurm.out
+#SBATCH --error=slurm.err
+#SBATCH --job-name={job_name}
+
+export UCX_TLS=all
+
+cd $SLURM_SUBMIT_DIR
+module purge
+module use /storage/icds/RISE/sw8/modules/
+module load vasp/vasp-6.4.1v
+
+eval "$(conda shell.bash hook)"
+conda activate pytheos
+
+python cstdn.py"""
+
+    with open(f"{output_dir}/submitvasp", "w+") as f:
+        f.writelines(slurm_script)
+
+    return None
