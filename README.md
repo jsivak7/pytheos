@@ -10,7 +10,7 @@ Python toolkit for high-entropy oxides (`pytheos`) is an open-source package bui
 
 The goal of this package is to consolidate and streamline code that has assisted our collaborative team in our understanding high-entropy oxide materials. Density functional theory (DFT) is the primary computational engine used for its ability to provide accurate predictions at the electronic and atomic scale. We have also started to implement machine-learning interatomic potentials (MLIPs) into our workflows as they have now become accurate enough to rapidly search over wide compositional spaces with drastically reduced costs compared to DFT. Other open-source packages such as [pymatgen](https://github.com/materialsproject/pymatgen), [custodian](https://github.com/materialsproject/custodian), and [sumo](https://github.com/SMTG-Bham/sumo) as well as the [Materials Project database](https://next-gen.materialsproject.org/) are utilized to leverage existing computational machinery and databases.
 
-A growing list of publications that have led to the development of this package can be found [here](docs/publications.md).
+A list of publications that have led to the development of `pytheos` can be found [here](docs/publications.md).
 
 Examples of how to use `pytheos` can be found [here](examples/).
 

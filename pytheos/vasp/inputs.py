@@ -1,11 +1,11 @@
-# for VASP input files generation
+# for VASP input file generation
 
 from ase import Atoms
 import os
 import yaml
 from pymatgen.core import Structure
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet
-from pymatgen.io.vasp.inputs import Kpoints
+from pymatgen.io.vasp.inputs import Kpoints, VaspInput
 import numpy as np
 import random
 from pytheos import utils
@@ -13,16 +13,17 @@ from pytheos import utils
 
 class CalcInputs:
     """
-    Class for generating VASP input files: INCAR, POSCAR, POTCAR, KPOINTS (if specified).
+    Class for generating VASP calculation input files.
 
-    The KSPACING tag is used instead of a KPOINTS file by default. A KPOINTS file can still be used by calling the `use_kpoints()` method.
+    The KSPACING tag is used instead of a KPOINTS file by default. A KPOINTS file can still be used by calling the `use_kpoints_file()` method.
+
+    You will likely get a "BadInputSetWarning", but just ignore once you check you are using the correct POTCARs (see https://matsci.org/t/potcar-warning-msg/34562).
 
     Attributes:
-        structure (Atoms): Initial structure as ASE Atoms.
-        mp_input_set (str): Materials Project input set for VASP calculations.
-        incar (Incar): Pymatgen INCAR object.
-        poscar (Poscar): Pymatgen POSCAR object.
-        potcar (Potcar): Pymatgen POTCAR object.
+        structure (Atoms): Initial structure as sorted Pymatgen Structure object.
+        incar (INCAR): Pymatgen INCAR object.
+        poscar (POSCAR): Pymatgen POSCAR object.
+        potcar (POTCAR): Pymatgen POTCAR object.
     """
 
     def __init__(self, structure: Atoms, mp_input_set: str = "MPScanRelaxSet"):
@@ -35,37 +36,24 @@ class CalcInputs:
             Exception: If supplied `mp_input_set` has not been implemented.
         """
 
-        self.structure = structure
-        self.mp_input_set = mp_input_set
+        # convert ASE Atoms to Pymatgen Structure and sort
+        self.structure = Structure.from_ase_atoms(structure).sort()
 
-        # convert ASE Atoms to PMG Structure and sort
-        self.structure = Structure.from_ase_atoms(self.structure).sort()
-
-        # get path to this module + get customized pytheos MP set
+        # get path to pytheos module + get customized pytheos MP set
         module_dir = os.path.dirname(__file__)
-
         try:
-            with open(f"{module_dir}/{self.mp_input_set.lower()}.yaml", "r") as f:
+            with open(f"{module_dir}/input_sets/{mp_input_set.lower()}.yaml", "r") as f:
                 incar_settings = yaml.load(f, Loader=yaml.SafeLoader)
         except:
             raise Exception(
-                f"The input set you provided ({self.mp_input_set}) is not implemented in pytheos.\nCurrent options are: MPRelaxSet (pbe) or MPScanRelaxSet (r2scan)."
+                f"The input set you provided ({mp_input_set}) is not implemented in pytheos."
             )
 
-        # make inputs based on specified input set
+        # make inputs based on specified MP input set
         if mp_input_set.lower() == "MPRelaxSet".lower():
-            input_set = MPRelaxSet(
-                structure=self.structure,
-                user_incar_settings=incar_settings,
-                user_potcar_functional="PBE",
-            ).get_input_set()
-
+            input_set = self._get_mprelaxset_inputs(incar_settings=incar_settings)
         elif mp_input_set.lower() == "MPScanRelaxSet".lower():
-            input_set = MPScanRelaxSet(
-                structure=self.structure,
-                user_incar_settings=incar_settings,
-                user_potcar_functional="PBE_54",
-            ).get_input_set()
+            input_set = self._get_mpscanrelaxset_inputs(incar_settings=incar_settings)
 
         self.incar = input_set.incar
         self.poscar = input_set.poscar
@@ -86,9 +74,9 @@ class CalcInputs:
 
         return None
 
-    def use_kpoints(self, kpoint_mesh: list) -> None:
+    def use_kpoints_file(self, kpoint_mesh: list) -> None:
         """
-        Generates a kpoints attribute to use a KPOINTS file instead of KSPACING tag in INCAR.
+        Uses a KPOINTS file instead of KSPACING tag.
 
         Args:
             kpoint_mesh (list): k-points mesh - always Gamma centered to be safe (ex. [4, 4, 4])
@@ -100,27 +88,24 @@ class CalcInputs:
         kpoints = Kpoints(kpts=kpoint_mesh)
         self.kpoints = kpoints
 
-        # KSPACING is removed from INCAR to ensure both are not used
-        self.incar.pop("KSPACING")
+        self.incar.pop("KSPACING")  # to ensure both are not used in tandem
 
         return None
 
-    # TODO check this...
     def apply_mag_order(
         self,
         magmom_values: dict,
         mag_order_file: str = "magorder.yaml",
         rattle_amount: float = 0.5,
         coord_decimals: int = 1,
-        anion: str = "O",
     ) -> list:
         """
-        Applies magnetic ordering to structure using coordinates supplied as spin-up and spin-down in `mag_order_path`.
+        Applies magnetic ordering to structure using coordinates supplied as spin-up and spin-down in `mag_order_file`.
 
         Magnetic moments can be "rattled" some amount around the specified magnetic moment value.
         Can be beneficial to break the initial magnetic symmetry and assists in electronic convergence.
 
-        NOTE that rattled values are between magmom_value +/- rattle_amount
+        NOTE that rattled values are between magmom_value +/- rattle_amount.
 
         Args:
             magmom_values (dict): Magnetic moment values for different elements in Bohr-Magneton.
@@ -130,7 +115,6 @@ class CalcInputs:
                 Bohr-Magneton. Defaults to 0.5.
             coord_decimals (int, optional): Number of decimals to round atom positions in Angstroms.
                 Helpful for distorted structures and rounding errors. Defaults to 1.
-            anion (str, optional): Anion in structure. Defaults to "O".
 
         Raises:
             Exception: If atomic coordinates cannot be identified as spin-up or spin-down.
@@ -167,7 +151,7 @@ class CalcInputs:
             )
 
             # only apply ordering to cations
-            if atom.label != anion:
+            if atom.label != "O":  # only want cations
                 coord_identified = False
 
                 # try to find in spin-up coordinates
@@ -236,23 +220,46 @@ class CalcInputs:
 
         return None
 
-    def _check_kpoints_kspacing(self) -> None:
+    def _get_mprelaxset_inputs(self, incar_settings: dict) -> VaspInput:
         """
-        Sanity check to ensure both KPOINTS and KSPACING are not used together.
+        Gets VASP input sets for MPRelaxSet using Pymatgen.
 
-        Raises:
-            Exception: If both KPOINTS and KSPACING are being used.
+        https://github.com/materialsproject/pymatgen/blob/master/src/pymatgen/io/vasp/MPRelaxSet.yaml
+
+        Args:
+            incar_settings (dict): INCAR settings for VASP run.
 
         Returns:
-            None
+            VaspInput: Pymatgen objects for VASP inputs (INCAR, POSCAR, POTCAR)
         """
 
-        if "KSPACING" in self.incar and hasattr(self, "kpoints"):
-            raise Exception(
-                "You tried to use both KPOINTS and KSPACING - you should only have one set!"
-            )
+        input_set = MPRelaxSet(
+            structure=self.structure,
+            user_incar_settings=incar_settings,
+            user_potcar_functional="PBE",
+        ).get_input_set()
 
-        return None
+        return input_set
+
+    def _get_mpscanrelaxset_inputs(self, incar_settings) -> VaspInput:
+        """
+        Gets VASP input sets for MPScanRelaxSet using Pymatgen.
+
+        https://github.com/materialsproject/pymatgen/blob/master/src/pymatgen/io/vasp/MPSCANRelaxSet.yaml
+
+        Args:
+            incar_settings (dict): INCAR settings for VASP run.
+
+        Returns:
+            VaspInput: Pymatgen objects for VASP inputs (INCAR, POSCAR, POTCAR)
+        """
+        input_set = MPScanRelaxSet(
+            structure=self.structure,
+            user_incar_settings=incar_settings,
+            user_potcar_functional="PBE_54",
+        ).get_input_set()
+
+        return input_set
 
 
 def write_submission_script(
@@ -269,7 +276,7 @@ def write_submission_script(
 
     Assumed calculations are being run via a `cstdn.py` script.
 
-    Specific for PennState RoarCollab HPC...
+    Specific for PennState RoarCollab HPC.
 
     Args:
         job_name (str): Name for job.

@@ -22,12 +22,3 @@ def check_with_user() -> None:
             print("Invalid input. Please enter 'yes' or 'no'")
 
     return None
-
-
-def sum(numbers=list) -> float:
-    # only for learning how to write unit tests...
-    total = 0
-    for number in numbers:
-        total += number
-
-    return total
