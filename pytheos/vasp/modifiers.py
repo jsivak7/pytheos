@@ -241,7 +241,7 @@ class CalcModifier:
 
         self.incar.update(
             {
-                "NBANDS": new_nbands,
+                # "NBANDS": new_nbands,
                 "LWAVE": False,
                 "LCHARG": False,
                 "NEDOS": 2000,  # for adequate sampling

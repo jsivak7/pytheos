@@ -183,9 +183,7 @@ class CalcInputs:
         # can pass with user input if this is the expected behavior
         if spin_counts["up"] != spin_counts["down"]:
             print("\nWARNING!!!")
-            print(
-                f"\nThe number of spin-up ({spin_counts["up"]}) and spin-down ({spin_counts["down"]}) atoms are not equal."
-            )
+            print(f"\nThe number of spin-up and spin-down atoms are not equal.")
             print("Sometimes this is expected (e.g. in cation defect calculations).")
             utils.check_with_user()
 
