@@ -4,6 +4,7 @@ from pymatgen.core import SETTINGS, Structure
 from pymatgen.io.vasp.inputs import Incar, Poscar, Potcar, Kpoints, VaspInput
 from ase.build import bulk
 import os
+from ase.io import read
 
 current_dir = module_dir = os.path.dirname(__file__)
 unitcell = bulk(name="MgO", crystalstructure="rocksalt", a=4.2)
@@ -60,6 +61,105 @@ def test_use_kpoints_file(fake_potcar_patch):
     assert calcinputs.kpoints == Kpoints(kpts=[5, 5, 5])
 
 
+def test_apply_mag_order(fake_potcar_patch):
+    supercell = read(f"{current_dir}/../files/NiO_prim_2x2x2.poscar")
+
+    calcinputs = CalcInputs(structure=supercell)
+
+    calcinputs.apply_mag_order(
+        magmom_values={
+            "Ni": 3,
+            "O": 0,
+        },
+        mag_order_file=f"{current_dir}/../files/magorder_rocksalt_2x2x2.yaml",
+        rattle_amount=0,  # to ensure we get expected MAGMOM in INCAR
+    )
+
+    assert calcinputs.incar["MAGMOM"] == [
+        3.0,
+        -3.0,
+        -3.0,
+        3.0,
+        -3.0,
+        3.0,
+        3.0,
+        -3.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    ]
+
+
+def test_write_files(fake_potcar_patch, tmp_path):
+
+    calcinputs = CalcInputs(structure=unitcell)
+
+    test_dir_name = "TEST_VASP_CALC"
+
+    calcinputs.write_files(output_dir=tmp_path / test_dir_name)
+
+    expected_dir_path = tmp_path / test_dir_name
+    expected_incar_path = expected_dir_path / "INCAR"
+    expected_poscar_path = expected_dir_path / "POSCAR"
+    expected_potcar_path = expected_dir_path / "POTCAR"
+
+    test_incar_content = """ALGO = All
+EDIFF = 1e-06
+EDIFFG = -0.02
+ENAUG = 1360
+ENCUT = 680.0
+IBRION = 2
+ISIF = 3
+ISMEAR = 0
+ISPIN = 2
+ISYM = 0
+KPAR = 1
+KSPACING = 0.25
+LAECHG = False
+LASPH = True
+LCHARG = True
+LELF = False
+LMIXTAU = True
+LORBIT = 11
+LREAL = Auto
+LVTOT = False
+LWAVE = True
+MAGMOM = 2*0.0
+METAGGA = R2scan
+NCORE = 32
+NELM = 500
+NSW = 250
+POTIM = 0.25
+PREC = Accurate
+SIGMA = 0.05
+TIME = 0.1
+"""
+
+    test_poscar_content = """Mg1 O1
+1.0
+   0.0000000000000000    2.1000000000000001    2.1000000000000001
+   2.1000000000000001    0.0000000000000000    2.1000000000000001
+   2.1000000000000001    2.1000000000000001    0.0000000000000000
+Mg O
+1 1
+direct
+   0.0000000000000000    0.0000000000000000    0.0000000000000000 Mg
+  -0.5000000000000000    0.5000000000000000    0.5000000000000000 O
+"""
+
+    assert expected_dir_path.is_dir()
+    assert expected_incar_path.is_file()
+    assert expected_poscar_path.is_file()
+    assert expected_potcar_path.is_file()
+    assert expected_poscar_path.read_text() == test_poscar_content
+    assert expected_incar_path.read_text() == test_incar_content
+
+
 def test_get_mprelaxset_inputs(fake_potcar_patch):
 
     calcinputs = CalcInputs(structure=unitcell, mp_input_set="MPRelaxSet")
@@ -76,3 +176,35 @@ def test_get_mpscanrelaxset_inputs(fake_potcar_patch):
     assert calcinputs.incar["ENCUT"] == 680
     assert calcinputs.incar["METAGGA"] == "R2scan"
     assert calcinputs.incar["EDIFF"] == 1e-06
+
+
+def test_write_submission_script(tmp_path):
+
+    expected_script_path = tmp_path / "submitvasp"
+
+    test_submission_script_content = """#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=64
+#SBATCH --mem-per-cpu=3500MB
+#SBATCH --time=72:00:00
+#SBATCH --partition=sla-prio
+#SBATCH --account=sbs5563_bc
+#SBATCH --output=slurm.out
+#SBATCH --error=slurm.err
+#SBATCH --job-name=test-vasp-calc
+
+export UCX_TLS=all
+
+cd $SLURM_SUBMIT_DIR
+module purge
+module use /storage/icds/RISE/sw8/modules/
+module load vasp/vasp-6.4.1v
+
+eval "$(conda shell.bash hook)"
+conda activate pytheos
+
+python cstdn.py"""
+
+    write_submission_script(job_name="test-vasp-calc", output_dir=tmp_path)
+
+    assert expected_script_path.read_text() == test_submission_script_content

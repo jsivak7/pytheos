@@ -205,8 +205,6 @@ class CalcInputs:
             None: VASP input files written to `output_dir`.
         """
 
-        self._check_kpoints_kspacing()
-
         os.mkdir(output_dir)
 
         self.incar.write_file(f"{output_dir}/INCAR")
