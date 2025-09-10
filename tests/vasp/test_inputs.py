@@ -62,6 +62,17 @@ def test_use_kpoints_file(fake_potcar_patch):
 
 def test_get_mprelaxset_inputs(fake_potcar_patch):
 
-    # calcinputs = CalcInputs(structure=unitcell, mp_input_set="MPRelaxSet")
+    calcinputs = CalcInputs(structure=unitcell, mp_input_set="MPRelaxSet")
 
-    pass
+    assert calcinputs.incar["ENCUT"] == 520
+    assert calcinputs.incar["GGA"] == "Pe"
+    assert calcinputs.incar["EDIFF"] == 1e-05
+
+
+def test_get_mpscanrelaxset_inputs(fake_potcar_patch):
+
+    calcinputs = CalcInputs(structure=unitcell, mp_input_set="MPScanRelaxSet")
+
+    assert calcinputs.incar["ENCUT"] == 680
+    assert calcinputs.incar["METAGGA"] == "R2scan"
+    assert calcinputs.incar["EDIFF"] == 1e-06
