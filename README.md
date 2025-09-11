@@ -6,7 +6,11 @@ height="150">
   </picture>
 </h1>
 
+<h4 align="center">
+
 [![Tests](https://github.com/jsivak7/pytheos/actions/workflows/tests.yml/badge.svg)](https://github.com/jsivak7/pytheos/actions/workflows/tests.yml)
+
+</h4>
 
 Python toolkit for high-entropy oxides (`pytheos`) is an open-source package built for exploring chemically disordered crystalline materials using computational methods. 
 

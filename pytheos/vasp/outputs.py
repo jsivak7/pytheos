@@ -7,7 +7,7 @@ from pandas import DataFrame
 
 class CalcOutputs:
     """
-    Class to hold common output data from VASP calculations.
+    Class to hold common output data for a given VASP calculation.
 
     Attributes:
         source_dir (str): Relative path to source directory from which VASP files will be loaded.
