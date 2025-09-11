@@ -4,7 +4,7 @@ from pytheos.vasp.outputs import load_vasprun
 from pymatgen.io.vasp.inputs import Incar, Poscar, Potcar, Kpoints
 from pymatgen.io.vasp.outputs import Eigenval
 import os
-from pytheos import utils
+import warnings
 
 
 class CalcModifier:
@@ -217,53 +217,13 @@ class CalcModifier:
         if incar_changes:
             self.incar.update(incar_changes)
 
-    # NOTE that this has been less extensively tested/used than other methods!!
-    def to_dielectric(
-        self,
-        incar_changes: dict = None,
-        increase_nbands: float = 2,
-    ) -> None:
-        """
-        Modifies VASP calculation objects for a dielectric calculation using the independent-particle approximation.
-        - see https://www.vasp.at/wiki/index.php/Dielectric_properties_of_SiC for more information
-
-        Args:
-            incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
-            increase_nbands (float, optional): Factor to increase number of bands from source calculation. Defaults to 2.
-        """
-
-        self._run_sanity_check()
-
-        self.calc_type = "dielectric"
-
-        self.chgcar = True
-        self.wavecar = True
-
-        self.incar.update(
-            {
-                # "NBANDS": new_nbands,
-                "LWAVE": False,
-                "LCHARG": False,
-                "NEDOS": 2000,  # for adequate sampling
-                "SIGMA": 0.1,
-                "ALGO": "Normal",
-                "EDIFF": 1e-8,
-                "LREAL": False,
-                "LOPTICS": True,
-                "CSHIFT": 0.01,
-            }
-        )
-
-        if incar_changes:
-            self.incar.update(incar_changes)
-
     def write_files(
         self,
         output_dir: str,
         copy_submit_script: bool = True,
     ) -> None:
         """
-        Write current CalcModifier objects to VASP files.
+        Write current CalcModifier attributes to VASP files.
         - A more complex scheme is used for 'bandstructure' type calculations due to need of NSCF calculation.
 
         Args:
@@ -341,8 +301,48 @@ class CalcModifier:
         """Run a sanity check when CalcModifier methods are attempted for any calc_type other than the inputted 'source' calc"""
 
         if self.calc_type != "source":
-            print("\nWARNING!!!")
-            print("You are not modifying from the source calculation initially loaded.")
-            print("You probably want to reinitialize a new CalcModifier...")
+            warnings.warn(
+                "WARNING!!! \nYou are not modifying from the source calculation initially loaded. \nYou probably want to reinitialize a new CalcModifier..."
+            )
 
-            utils.check_with_user()
+    ###
+    # NOTE that this has been less extensively tested/used than other methods!! BE CAREFUL!
+    ###
+    def to_dielectric(
+        self,
+        incar_changes: dict = None,
+        increase_nbands: float = 2,
+    ) -> None:
+        """
+        Modifies VASP calculation objects for a dielectric calculation using the independent-particle approximation.
+        - see https://www.vasp.at/wiki/index.php/Dielectric_properties_of_SiC for more information
+
+        Args:
+            incar_changes (dict, optional): Additional changes to INCAR that the user can supply as a dictionary. Defaults to None.
+            increase_nbands (float, optional): Factor to increase number of bands from source calculation. Defaults to 2.
+        """
+
+        self._run_sanity_check()
+
+        self.calc_type = "dielectric"
+
+        self.chgcar = True
+        self.wavecar = True
+
+        self.incar.update(
+            {
+                # "NBANDS": new_nbands,
+                "LWAVE": False,
+                "LCHARG": False,
+                "NEDOS": 2000,  # for adequate sampling
+                "SIGMA": 0.1,
+                "ALGO": "Normal",
+                "EDIFF": 1e-8,
+                "LREAL": False,
+                "LOPTICS": True,
+                "CSHIFT": 0.01,
+            }
+        )
+
+        if incar_changes:
+            self.incar.update(incar_changes)

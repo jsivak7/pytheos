@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import Figure
 import numpy as np
 from pymatgen.util.string import latexify
-from pytheos import utils
+import warnings
 
 
 class ChemPotDiagram:
@@ -86,11 +86,9 @@ class ChemPotDiagram:
                 break
 
         else:
-            print(f"WARNING!!!")
-            print(
-                f"\nTarget compound ({self.target_compound}) is not stable in the supplied phase diagram, therefore it will not exist on the chemical potential diagram."
+            warnings.warn(
+                f"WARNING!!! \nTarget compound ({self.target_compound}) is not stable in the supplied phase diagram, therefore it will not exist on the chemical potential diagram."
             )
-            utils.check_with_user()
 
     def _get_range_map(self, element: str) -> dict:
         """

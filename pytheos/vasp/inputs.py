@@ -8,7 +8,7 @@ from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet
 from pymatgen.io.vasp.inputs import Kpoints, VaspInput
 import numpy as np
 import random
-from pytheos import utils
+import warnings
 
 
 class CalcInputs:
@@ -182,10 +182,9 @@ class CalcInputs:
         # check that number of spin-up atoms = spin-down atoms
         # can pass with user input if this is the expected behavior
         if spin_counts["up"] != spin_counts["down"]:
-            print("\nWARNING!!!")
-            print(f"\nThe number of spin-up and spin-down atoms are not equal.")
-            print("Sometimes this is expected (e.g. in cation defect calculations).")
-            utils.check_with_user()
+            warnings.warn(
+                f"WARNING!!! \nThe number of spin-up and spin-down atoms are not equal. \nSometimes this is expected (e.g. in cation defect calculations)..."
+            )
 
         # update incar attribute with magnetic ordering
         self.incar.update({"MAGMOM": magmoms})

@@ -1,7 +1,7 @@
 from pytheos.vasp.inputs import CalcInputs, write_submission_script
 import pytest
 from pymatgen.core import SETTINGS, Structure
-from pymatgen.io.vasp.inputs import Incar, Poscar, Potcar, Kpoints, VaspInput
+from pymatgen.io.vasp.inputs import Incar, Poscar, Potcar, Kpoints
 from ase.build import bulk
 import os
 from ase.io import read
@@ -12,6 +12,10 @@ unitcell = bulk(name="MgO", crystalstructure="rocksalt", a=4.2)
 
 @pytest.fixture
 def fake_potcar_patch(monkeypatch):
+    """
+    Creates a path to the fake POTCAR files with scrambled data for copyright purposes
+    """
+
     monkeypatch.setitem(
         dic=SETTINGS,
         name="PMG_VASP_PSP_DIR",
@@ -20,6 +24,9 @@ def fake_potcar_patch(monkeypatch):
 
 
 def test_calc_inputs_init(fake_potcar_patch):
+    """
+    Tests that CalcInputs class has proper attributes during its default initialization.
+    """
 
     calcinputs = CalcInputs(structure=unitcell)
 
@@ -51,6 +58,12 @@ def test_update_incar(fake_potcar_patch):
 
 
 def test_use_kpoints_file(fake_potcar_patch):
+    """
+    Tests that KPOINTS file can be used instead of KSPACING INCAR tag.
+
+    Ensures that both KPOINTS file and KSPACING tag are not both used,
+    as this could lead to undesirable results.
+    """
 
     calcinputs = CalcInputs(structure=unitcell)
 
@@ -62,6 +75,12 @@ def test_use_kpoints_file(fake_potcar_patch):
 
 
 def test_apply_mag_order(fake_potcar_patch):
+    """
+    Ensures that the automatic magnetic ordering generator method works properly
+    for a given magorder.yaml file. Probably could be more complete, however just
+    wanted to make sure this is working as expected.
+    """
+
     supercell = read(f"{current_dir}/../files/NiO_prim_2x2x2.poscar")
 
     calcinputs = CalcInputs(structure=supercell)
