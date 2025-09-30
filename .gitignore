@@ -1,6 +1,10 @@
 # User added
 .DS_Store
 **/POTCAR
+**/vasprun.xml
+**/EIGENVAL
+**/CHGCAR
+**/WAVECAR
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
