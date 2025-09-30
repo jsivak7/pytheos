@@ -17,7 +17,7 @@ class CalcInputs:
 
     The KSPACING tag is used instead of a KPOINTS file by default. A KPOINTS file can still be used by calling the `use_kpoints_file()` method.
 
-    You will likely get a "BadInputSetWarning", but just ignore once you check you are using the correct POTCARs (see https://matsci.org/t/potcar-warning-msg/34562).
+    Likely will get a "BadInputSetWarning", but just ignore once you check you are using the correct POTCARs (see https://matsci.org/t/potcar-warning-msg/34562).
 
     Attributes:
         structure (Atoms): Initial structure as sorted Pymatgen Structure object.

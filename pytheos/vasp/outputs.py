@@ -3,6 +3,8 @@
 
 from pymatgen.io.vasp import Vasprun
 from pandas import DataFrame
+import os
+import pandas as pd
 
 
 class CalcOutputs:
@@ -88,8 +90,6 @@ def load_vasprun(
         Vasprun: Pymatgen Vasprun object
     """
 
-    from pymatgen.io.vasp.outputs import Vasprun
-
     v = Vasprun(
         filename=path,
         parse_dos=parse_dos,
@@ -130,7 +130,6 @@ def run_bader_analysis(
         bader_path (str, optional): Relative path to Bader charge software. Defaults to "bader".
             Usually should be placed somewhere that can be called from anywhere.
     """
-    import os
 
     os.system(f"{chgsum_path} AECCAR0 AECCAR2")
     os.system(f"{bader_path} CHGCAR -ref CHGCAR_sum")
@@ -143,8 +142,6 @@ def _convert_baderACF_to_csv() -> None:
     - https://theory.cm.utexas.edu/henkelman/code/bader/
     - NOTE: call in the same location as VASP output files.
     """
-
-    import os
 
     os.system("cp ACF.dat ACF.csv")
 
@@ -197,9 +194,6 @@ def extract_optical_data(run="vasprun.xml", anisotropic=False) -> DataFrame:
     Returns:
         Pandas DataFrame with optical data
     """
-
-    import os
-    import pandas as pd
 
     properties = [
         "absorption",  # optical absorption

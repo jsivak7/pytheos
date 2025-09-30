@@ -22,25 +22,15 @@ Careful with using the GGA_GGA+U_R2SCAN mixing scheme (https://github.com/materi
 - I have had some energy inconsistencies, therefore I have not used it too much, however perhaps I am not doing something exactly correctly...
 - One should preferentially use either GGA/GGA+U or R2SCAN and these are the options I mention in the package.
 
-### Using API keys and ".env" file
-
-.env files can be used to load specific environments, and are especially useful for storing API keys without sharing them to .git or with anyone. These are private and should never be shared with anyone - so be careful adding them to your scripts and sharing them/adding them to a version control system (VCS) like GitHub.
-
+### Easily using MP API keys
 A personal Materials Project API key can be generated at https://next-gen.materialsproject.org/api
 
-The following steps can be taken to use your MP API key in `pytheos` ->
-
-1. Get your Materials Project API key from the above link.
-2. Copy  [examples/sample_api_key.env](../examples/sample_api_key.env) --> `pytheos` root directory.
-3. Add your own API key to this file by replacing "your_api_key" with your generated Materials Project API key.
-4. Be sure that file is not in VCS/shared with others!
-
-Whenever you would like to access your MP API key quickly, you can load it before querying the MP API using:
+One can easily use their own personal API key by add the following to their .pmgrc.yaml file:
 ```
-from pytheos.materials_project import load_mp_api_key
-
-mp_api_key = load_mp_api_key()
+PMG_MAPI_KEY: your_mp_api_key
 ```
+
+MPRester is able to automatically read this when used, thus you do not have to enter an MP API key when querying from the Materials Project Database.
 
 ## Stability
 #TODO

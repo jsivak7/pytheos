@@ -1,18 +1,18 @@
-# module to facilitate Crystal Hamiltonian Graph Neural Network (CHGNet) simulation inputs
-# see OG publication --> Deng, B. et al. Nat Mach Intell 5, 1031–1041 (2023). https://doi.org/10.1038/s42256-023-00716-3
-
-# TODO update with MatGL prefitted
+# Machine Learning Interatomic Potentials
 
 from ase import Atoms
+from chgnet.model.dynamics import StructOptimizer
+from chgnet.model.model import CHGNet
+from pymatgen.core import Structure
 
 
-def run_relax(
+def relax_with_OG_chgnet_MPTrj(
     structure: Atoms,
     max_force=0.050,
     optimizer="FIRE",
 ):
     """
-    For running CHGNet relaxation at 0K for an inputted ASE Atoms object
+    For running Crystal Hamiltonian Graph Neural Network (CHGNet) relaxation at 0K for an inputted ASE Atoms object
     - NOTE that resulting energy includes the MP2020Compatibility corrections from Materials Project
         - (https://docs.materialsproject.org/methodology/materials-methodology/thermodynamic-stability/thermodynamic-stability/anion-and-gga-gga+u-mixing)
 
@@ -26,15 +26,15 @@ def run_relax(
             - https://gpaw.readthedocs.io/devel/ase_optimize/ase_optimize.html
 
     Returns:
-        tuple: (Atoms object of relaxed structure, total energy in eV/atom w/ MP2020Compatibility corrections, and list of magnetic moments)
+        dict: results = {
+            "final_structure": s_final, # ASE Atoms object
+            "energy_eVperAtom": energy, # includes MP2020Compatibility corrections
+            "magmoms": magmoms, # list of magnetic moments following structure ordering
+        }
     """
 
-    from chgnet.model.dynamics import StructOptimizer
-    from chgnet.model.model import CHGNet
-    from pymatgen.core import Structure
-
     print(
-        f"\nRunning CHGNet relaxation with force criteria = {max_force} meV/Angstrom -->\n"
+        f"Running CHGNet relaxation with force criteria = {max_force} meV/Angstrom..."
     )
 
     s = Structure.from_ase_atoms(structure)
@@ -60,4 +60,10 @@ def run_relax(
     # same order as inputted structure
     magmoms = s_final_pmg.site_properties["magmom"]
 
-    return (s_final, energy, magmoms)
+    results = {
+        "final_structure": s_final,
+        "energy_eVperAtom": energy,
+        "magmoms": magmoms,
+    }
+
+    return results

@@ -1,8 +1,9 @@
 # for evaluting enthalpic stability
-# TODO add in mixing enthalpy calculator
 
 from pymatgen.analysis.phase_diagram import PhaseDiagram, PDEntry
 from pymatgen.io.vasp import Vasprun
+from pymatgen.entries.compatibility import MaterialsProject2020Compatibility
+import numpy as np
 
 
 class EnthalpicStability:
@@ -44,6 +45,7 @@ class EnthalpicStability:
         Returns:
             PDEntry: target PDEntry.
         """
+
         for entry in self.phase_diagram.all_entries:
 
             if entry.name == self.target_entry_name:
@@ -100,6 +102,7 @@ class EnthalpicStability:
         Returns:
             str: Decomposition reaction.
         """
+
         target_entry = self._find_target_entry()
         decomp_entries = self.phase_diagram.get_decomp_and_phase_separation_energy(
             entry=target_entry
@@ -137,9 +140,6 @@ def apply_mp2020compat(run: Vasprun) -> float:
     Returns:
         float: Corrected energy in eV/atom
     """
-
-    from pymatgen.entries.compatibility import MaterialsProject2020Compatibility
-    import numpy as np
 
     v = run.get_computed_entry()
 

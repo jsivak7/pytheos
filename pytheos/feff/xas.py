@@ -3,6 +3,12 @@
 
 from ase import Atoms
 from pandas import DataFrame
+from pymatgen.core import Structure
+from pymatgen.io.feff import sets
+import os
+import yaml
+from pymatgen.io.feff import outputs
+import pandas as pd
 
 
 def write_xanes_inputs(
@@ -25,11 +31,6 @@ def write_xanes_inputs(
     Raises:
         FileExistsError: If output directory already exists
     """
-
-    from pymatgen.core import Structure
-    from pymatgen.io.feff import sets
-    import os
-    import yaml
 
     print(f"\nSetting up FEFF XANES inputs...")
 
@@ -116,9 +117,6 @@ def xmu_dat_to_df(
     Returns:
         pd.DataFrame: Pandas dataframe object of FEFF output data from xmu.dat.
     """
-
-    from pymatgen.io.feff import outputs
-    import pandas as pd
 
     print(f"Reading {xmu_path} as Pandas DataFrame")
 

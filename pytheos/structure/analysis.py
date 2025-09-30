@@ -2,6 +2,10 @@
 
 from ase import Atoms
 from pymatgen.core.structure import Structure
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+from pymatgen.analysis.diffraction.xrd import XRDCalculator
+import numpy as np
+from pymatgen.core import Composition
 
 
 def get_space_group(
@@ -10,7 +14,7 @@ def get_space_group(
     angle_tolerance: float = 5.0,
 ) -> tuple:
     """
-    Get space group symbol and international space group symbol for inputted structure.
+    Get space group symbol and international space group number for inputted structure.
 
     The Pymatgen defaults are used as defaults here as well.
 
@@ -20,10 +24,8 @@ def get_space_group(
         angle_tolerance (float, optional): Angle tolerance for symmetry search. Defaults to 5.0.
 
     Returns:
-        tuple: (space group symbol, international space group number)
+        dict: "symbol" key for space group symbol, and "number" key for international space group symbol
     """
-
-    from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
     struc = Structure.from_ase_atoms(struc)
     symbol = SpacegroupAnalyzer(
@@ -38,10 +40,12 @@ def get_space_group(
         angle_tolerance=angle_tolerance,
     ).get_space_group_number()
 
-    return (symbol, number)
+    space_groups = {"symbol": symbol, "number": number}
+
+    return space_groups
 
 
-def get_diffraction_pattern(struc: Atoms, scaled=True) -> dict:
+def simulate_diffraction_pattern(struc: Atoms, scaled=True) -> dict:
     """
     Get simulated diffraction pattern for a structure file using Pymatgen
 
@@ -53,8 +57,6 @@ def get_diffraction_pattern(struc: Atoms, scaled=True) -> dict:
         dict: 2theta values with corresponding intensities
     """
 
-    from pymatgen.analysis.diffraction.xrd import XRDCalculator
-
     struc = Structure.from_ase_atoms(struc)
     calculator = XRDCalculator()
 
@@ -64,7 +66,7 @@ def get_diffraction_pattern(struc: Atoms, scaled=True) -> dict:
     return diffraction_data
 
 
-def get_lattice_parameters(struc: Atoms) -> tuple:
+def extract_lattice_parameters(struc: Atoms) -> tuple:
     """
     Gets lattice parmeters from an ASE Atoms object.
 
@@ -74,9 +76,6 @@ def get_lattice_parameters(struc: Atoms) -> tuple:
     Returns:
         tuple: (a, b, c)
     """
-
-    from pymatgen.core.structure import Structure
-    import numpy as np
 
     struc = Structure.from_ase_atoms(struc)
     lattice_parameters = struc.lattice.abc
@@ -88,7 +87,7 @@ def get_lattice_parameters(struc: Atoms) -> tuple:
     return lattice_parameters
 
 
-def get_firstNN_bonds(
+def extract_firstNN_bonds(
     struc: Atoms,
     atom_num: int,
     num_NNs: int,
@@ -97,6 +96,9 @@ def get_firstNN_bonds(
 ) -> tuple:
     """
     Gets all first nearest neighbor (NN) bond lengths for a specified cation with surrounding anions within a structure.
+
+    *Note that this has primarily been applied only for rocksalt systems (where all cation-oxygen bonds are equivalent).*
+    I plan to implement another methodology for structure containing multiple inequivalent cation sites in the future #TODO
 
     A flexible, self-consistent scheme has been implemented that allows for consistent NN extraction even for highly distorted lattices commonly present in HEOs.
     This is done by applying a 'shift' to the search radius around atom of interest by comparing the expected and actual number of NNs found.
@@ -114,10 +116,6 @@ def get_firstNN_bonds(
     Returns:
         tuple: (1D list bondlengths, 1D list anion indices corresponding to bond lengths)
     """
-
-    from pymatgen.core.structure import Structure
-    from pymatgen.core import Composition
-    import numpy as np
 
     struc = Structure.from_ase_atoms(struc)
 

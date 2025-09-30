@@ -1,6 +1,10 @@
 # Publications
 *Ordered newest to oldest*
 
+R.J. Spurling, **J.T. Sivak**, S.B. Sinnott, J.-P. Maria, Multivalency in Zr6Nb2O17, Scripta Materialia 271 (2026) 117014. https://doi.org/10.1016/j.scriptamat.2025.117014.
+
+**J.T. Sivak**, R.J. Spurling, J.-P. Maria, S.B. Sinnott, Exploring Cation Selection and Disorder within Entropy-Driven A6B2O17 (A=Zr/Hf, B=Nb/Ta) Oxides, arXiv Preprint arXiv:2509.19132 (2025). https://arxiv.org/abs/2509.19132
+
 S.S.I. Almishal, M. Furst, Y. Tan, **J.T. Sivak**, G. Bejger, J. Petruska, S.V.G. Ayyagari, D. Srikanth, N. Alem, C.M. Rost, S.B. Sinnott, L.-Q. Chen, J.-P. Maria, Thermodynamics-inspired high-entropy oxide synthesis, Nature Communications 16 (2025) 8211. https://doi.org/10.1038/s41467-025-63567-z.
 
 M. Furst, J. Petruska, D. Srikanth, **J.T. Sivak**, S.B. Sinnott, C.M. Rost, J.-P. Maria, S.S. Almishal, Maximizing solubility in rock salt high-entropy oxides, arXiv Preprint arXiv:2506.15604 (2025). https://arxiv.org/abs/2506.15604
