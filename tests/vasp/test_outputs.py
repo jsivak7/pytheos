@@ -29,5 +29,9 @@ def test_CalcOutputs():
     assert num_atoms == 8
     assert final_energy == -64.50440241
     assert calcoutputs.final_energy_per_atom == final_energy / num_atoms
-    assert calcoutputs.lattice_parameters == pytest.approx((4.20, 4.20, 4.20), rel=1e-3)
-    assert calcoutputs.lattice_angles == pytest.approx((90, 90, 90), rel=1e-4)
+    assert calcoutputs.lattice_parameters == pytest.approx(
+        {"a": 4.20, "b": 4.20, "c": 4.20}, rel=1e-3
+    )
+    assert calcoutputs.lattice_angles == pytest.approx(
+        {"alpha": 90, "beta": 90, "gamma": 90}, rel=1e-4
+    )
