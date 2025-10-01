@@ -18,8 +18,8 @@ class CalcOutputs:
         structure (Structure): Final structure as a Pymatgen Structure object.
         num_atoms (int): Number of atoms.
         volume (float): Final volume of structure in Angstroms^3.
-        lattice_parameters (tuple): Final lattice parameters (a, b, c) in Angstroms.
-        lattice_angles (tuple): Final lattice angles (alpha, beta, gamma), in degrees.
+        lattice_parameters (dict): Final lattice parameters (a, b, c) in Angstroms.
+        lattice_angles (dict): Final lattice angles (alpha, beta, gamma), in degrees.
         composition (Composition): Pymatgen Composition object. Example - "Mg8 O8".
         chemical_system (str): Chemical system of structure. Example - "Mg-Co-O".
         final_energy (float): Final energy in eV.
@@ -45,16 +45,16 @@ class CalcOutputs:
         self.structure = self.vasprun.final_structure
         self.num_atoms = self.structure.num_sites
         self.volume = self.structure.volume
-        self.lattice_parameters = (
-            self.structure.lattice.a,
-            self.structure.lattice.b,
-            self.structure.lattice.c,
-        )
-        self.lattice_angles = (
-            self.structure.lattice.alpha,
-            self.structure.lattice.beta,
-            self.structure.lattice.gamma,
-        )
+        self.lattice_parameters = {
+            "a": self.structure.lattice.a,
+            "b": self.structure.lattice.b,
+            "c": self.structure.lattice.c,
+        }
+        self.lattice_angles = {
+            "alpha": self.structure.lattice.alpha,
+            "beta": self.structure.lattice.beta,
+            "gamma": self.structure.lattice.gamma,
+        }
 
         self.composition = self.structure.composition
         self.chemical_system = self.structure.composition.chemical_system
