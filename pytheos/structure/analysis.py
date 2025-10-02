@@ -6,6 +6,8 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.analysis.diffraction.xrd import XRDCalculator
 import numpy as np
 from pymatgen.core import Composition
+import pandas as pd
+import time
 
 
 def get_space_group(
@@ -181,44 +183,33 @@ def extract_firstNN_bonds(
     return (distances, indices)
 
 
-# TODO NEEDS TO BE FIXED I THINK - CAREFUL USING YET
-# TODO I BELIEVE I HAVE AN OPTIMIZED VERSION OF THIS FUNCTION IN PEROVSKITE CONDUCTORS PROJECT FILES
-def get_octahedral_bondangles(
-    struc_path: str,
-    bsite_cations: tuple,
+def extract_octahedral_bondangles(
+    struc: Atoms,
+    bsite_cations: list,
     bondlength_max=2.5,
     bondangle_min=120,
-    write_csv=False,
-) -> list:
+) -> pd.DataFrame:
     """
-    Given a structure file, extracts the B-O-B bond angles.
-    - NOTE that function currently does not take into account PBCs, thus a 2x2x2 supercell is used
+    Given a structure file, extracts the B-O-B bond angles - tested only within a perovskite structure, however this should (in theory) work for other structure...
+    - NOTE currently does NOT take into account PBCs, thus you may want to utilize a 2x2x2 supercell of your relaxed calculation...
 
     Args:
-        struc_path (str): relative path to structure file
-        bsite_cations (tuple): b-site cations that will be searched over
+        struc (Atoms): ASE Atoms object of structure
+        bsite_cations (tuple): b-site cations that will be searched over. Example: ["Ti"], or ["Ti", "V"]
         bondlength_max (float, optional): maximum bond length allowed between atom1-atom2 & atom2-atom3. Defaults to 2.5 for a reasonable default.
         bondangle_min (int, optional): minimum bond angle allowed. Defaults to 120 for a reasonable value.
-        write_csv (bool, optional): if user wants to write a .csv file with data on bond angles. Defaults to False.
-            - "bondangles.csv"
+
 
     Returns:
-        float: average bond angle
+        Pandas DataFrame: bond lengths for B-O-B combinations including atom numbers and species
     """
-    from pymatgen.core.structure import Structure
-    from pymatgen.core.composition import Composition
-    import numpy as np
-    import pandas as pd
-    import time
 
     start_time = time.time()
 
-    print(f"\n========== Getting average octahedral bond angle ==========")
-    print(f"structure path:\t\t{struc_path}")
-    print(f"bsite cations:\t\t{bsite_cations}")
+    print(f"Extracting average octahedral bond angles...")
+    print(f"bsite cations: {bsite_cations}")
 
-    struc = Structure.from_file(struc_path)
-    struc.make_supercell((2, 2, 2))  # since PBC are not considered
+    struc = Structure.from_ase_atoms(struc)
 
     len_struc = np.arange(0, len(struc))
     counter = 0
@@ -233,6 +224,7 @@ def get_octahedral_bondangles(
     bsite_compositions = []
 
     for bsite_cation in bsite_cations:
+        print(bsite_cation)
         bsite_compositions.append(Composition(bsite_cation))
 
     # loop through all combinations of 3 atoms within structure
@@ -293,24 +285,21 @@ def get_octahedral_bondangles(
                                             )
     end_time = time.time()
 
-    print(f"num bond angles found:\t{counter}")
+    print(f"num bond angles found: {counter}")
     avg_bondangle = np.average(bond_angles)
 
-    if write_csv == True:
-        data = pd.DataFrame(
-            {
-                "atom1": atoms1,
-                "atom1_species": atoms1_species,
-                "atom2": atoms2,
-                "atom2_species": atoms2_species,
-                "atom3": atoms3,
-                "atom3_species": atoms3_species,
-                "bondangle": bond_angles,
-            }
-        )
+    data = pd.DataFrame(
+        {
+            "atom1": atoms1,
+            "atom1_species": atoms1_species,
+            "atom2": atoms2,
+            "atom2_species": atoms2_species,
+            "atom3": atoms3,
+            "atom3_species": atoms3_species,
+            "bondangle": bond_angles,
+        }
+    )
 
-        data.to_csv("bondangles.csv", index=False)
-
-    print(f"avg bond angle:\t\t{avg_bondangle:.1f}\u00b0")
-    print(f"elapsed time:\t\t{end_time-start_time:.2f} seconds")
-    return avg_bondangle
+    print(f"avg bond angle: {avg_bondangle:.1f}\u00b0")
+    print(f"elapsed time: {end_time-start_time:.2f} seconds")
+    return data
