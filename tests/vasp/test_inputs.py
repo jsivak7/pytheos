@@ -8,6 +8,7 @@ from ase.io import read
 
 current_dir = module_dir = os.path.dirname(__file__)
 unitcell = bulk(name="MgO", crystalstructure="rocksalt", a=4.2)
+unitcell = Structure.from_ase_atoms(unitcell)
 
 
 @pytest.fixture
