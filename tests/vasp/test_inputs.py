@@ -8,6 +8,7 @@ from ase.io import read
 
 current_dir = module_dir = os.path.dirname(__file__)
 unitcell = bulk(name="MgO", crystalstructure="rocksalt", a=4.2)
+unitcell = Structure.from_ase_atoms(unitcell)
 
 
 @pytest.fixture
@@ -28,9 +29,9 @@ def test_calc_inputs_init(fake_potcar_patch):
     Tests that CalcInputs class has proper attributes during its default initialization.
     """
 
-    calcinputs = CalcInputs(structure=unitcell)
+    calcinputs = CalcInputs(struc=unitcell)
 
-    assert isinstance(calcinputs.structure, Structure)
+    assert isinstance(calcinputs.struc, Structure)
     assert isinstance(calcinputs.incar, Incar)
     assert isinstance(calcinputs.poscar, Poscar)
     assert isinstance(calcinputs.potcar, Potcar)
@@ -39,7 +40,7 @@ def test_calc_inputs_init(fake_potcar_patch):
 
 def test_update_incar(fake_potcar_patch):
 
-    calcinputs = CalcInputs(structure=unitcell)
+    calcinputs = CalcInputs(struc=unitcell)
 
     # just changing random things for testing purposes
     calcinputs.update_incar(
@@ -65,7 +66,7 @@ def test_use_kpoints_file(fake_potcar_patch):
     as this could lead to undesirable results.
     """
 
-    calcinputs = CalcInputs(structure=unitcell)
+    calcinputs = CalcInputs(struc=unitcell)
 
     calcinputs.use_kpoints_file(kpoint_mesh=[5, 5, 5])
 
@@ -81,9 +82,9 @@ def test_apply_mag_order(fake_potcar_patch):
     wanted to make sure this is working as expected.
     """
 
-    supercell = read(f"{current_dir}/../files/NiO_prim_2x2x2.poscar")
+    supercell = Structure.from_file(f"{current_dir}/../files/NiO_prim_2x2x2.vasp")
 
-    calcinputs = CalcInputs(structure=supercell)
+    calcinputs = CalcInputs(struc=supercell)
 
     calcinputs.apply_mag_order(
         magmom_values={
@@ -116,7 +117,7 @@ def test_apply_mag_order(fake_potcar_patch):
 
 def test_write_files(fake_potcar_patch, tmp_path):
 
-    calcinputs = CalcInputs(structure=unitcell)
+    calcinputs = CalcInputs(struc=unitcell)
 
     test_dir_name = "TEST_VASP_CALC"
 
@@ -181,7 +182,7 @@ direct
 
 def test_get_mprelaxset_inputs(fake_potcar_patch):
 
-    calcinputs = CalcInputs(structure=unitcell, mp_input_set="MPRelaxSet")
+    calcinputs = CalcInputs(struc=unitcell, mp_input_set="MPRelaxSet")
 
     assert calcinputs.incar["ENCUT"] == 520
     assert calcinputs.incar["GGA"] == "Pe"
@@ -190,7 +191,7 @@ def test_get_mprelaxset_inputs(fake_potcar_patch):
 
 def test_get_mpscanrelaxset_inputs(fake_potcar_patch):
 
-    calcinputs = CalcInputs(structure=unitcell, mp_input_set="MPScanRelaxSet")
+    calcinputs = CalcInputs(struc=unitcell, mp_input_set="MPScanRelaxSet")
 
     assert calcinputs.incar["ENCUT"] == 680
     assert calcinputs.incar["METAGGA"] == "R2scan"
