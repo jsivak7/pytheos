@@ -1,6 +1,5 @@
 # tools for analyzing structures
 
-from ase import Atoms
 from pymatgen.core.structure import Structure
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.analysis.diffraction.xrd import XRDCalculator
@@ -11,7 +10,7 @@ import time
 
 
 def get_space_group(
-    struc: Atoms,
+    struc: Structure,
     symprec: float = 0.01,
     angle_tolerance: float = 5.0,
 ) -> tuple:
@@ -21,7 +20,7 @@ def get_space_group(
     The Pymatgen defaults are used as defaults here as well.
 
     Args:
-        struc (Atoms): structure to get space group
+        struc (Structure): structure to get space group
         symprec (float, optional): Tolerance for symmetry search. Defaults to 0.01.
         angle_tolerance (float, optional): Angle tolerance for symmetry search. Defaults to 5.0.
 
@@ -29,7 +28,6 @@ def get_space_group(
         dict: "symbol" key for space group symbol, and "number" key for international space group symbol
     """
 
-    struc = Structure.from_ase_atoms(struc)
     symbol = SpacegroupAnalyzer(
         structure=struc,
         symprec=symprec,
@@ -47,19 +45,18 @@ def get_space_group(
     return space_groups
 
 
-def simulate_diffraction_pattern(struc: Atoms, scaled=True) -> dict:
+def simulate_diffraction_pattern(struc: Structure, scaled=True) -> dict:
     """
     Get simulated diffraction pattern for a structure file using Pymatgen
 
     Args:
-        struc (Atoms): structure to for generating diffraction pattern
+        struc (Structure): structure to for generating diffraction pattern
         scaled (bool, optional): if intensities should be scaled so that max=100. Defaults to True.
 
     Returns:
         dict: 2theta values with corresponding intensities
     """
 
-    struc = Structure.from_ase_atoms(struc)
     calculator = XRDCalculator()
 
     pattern = calculator.get_pattern(struc, scaled=scaled)
@@ -68,18 +65,17 @@ def simulate_diffraction_pattern(struc: Atoms, scaled=True) -> dict:
     return diffraction_data
 
 
-def extract_lattice_parameters(struc: Atoms) -> tuple:
+def extract_lattice_parameters(struc: Structure) -> tuple:
     """
-    Gets lattice parmeters from an ASE Atoms object.
+    Gets lattice parameters.
 
     Args:
-        struc (Atoms): Structure input.
+        struc (Structure): Structure input.
 
     Returns:
         tuple: (a, b, c)
     """
 
-    struc = Structure.from_ase_atoms(struc)
     lattice_parameters = struc.lattice.abc
 
     print(f"a = {np.round(lattice_parameters[0], 4)} \u212b")
@@ -90,24 +86,22 @@ def extract_lattice_parameters(struc: Atoms) -> tuple:
 
 
 def extract_firstNN_bonds(
-    struc: Atoms,
-    atom_num: int,
+    struc: Structure,
     num_NNs: int,
     radius=3.00,
     anion="O",
-) -> tuple:
+) -> dict:
     """
-    Gets all first nearest neighbor (NN) bond lengths for a specified cation with surrounding anions within a structure.
+    Gets all first nearest neighbor (NN) cation-anion bond lengths for a specified structure.
 
     *Note that this has primarily been applied only for rocksalt systems (where all cation-oxygen bonds are equivalent).*
-    I plan to implement another methodology for structure containing multiple inequivalent cation sites in the future #TODO
+    I plan to implement another methodology for structure containing multiple inequivalent cation sites in the future...
 
     A flexible, self-consistent scheme has been implemented that allows for consistent NN extraction even for highly distorted lattices commonly present in HEOs.
     This is done by applying a 'shift' to the search radius around atom of interest by comparing the expected and actual number of NNs found.
 
     Args:
-        struc (Atoms): ASE Atoms object as structure input.
-        atom_num (int): Atom of interest.
+        struc (Structure): Pymatgen Structure input.
         num_NNs (int): Number of NN to extract.
         radius (float, optional): Starting radius for NN search in Angstroms. Defaults to 3.00.
         anion (str, optional): Anion element. Defaults to "O".
@@ -116,89 +110,104 @@ def extract_firstNN_bonds(
         ValueError: If implemented self-consistent scheme still cannot find correct number of NNs.
 
     Returns:
-        tuple: (1D list bondlengths, 1D list anion indices corresponding to bond lengths)
+        dict: {"distances": 1D list bondlengths, "indices": 1D list anion indices corresponding to bond lengths}
     """
 
-    struc = Structure.from_ase_atoms(struc)
+    all_data = {
+        "species": [],
+        "distance": [],
+        "anion index": [],
+    }
 
-    print(f"\natom #{atom_num} ({struc[atom_num].species})")
+    # loop through all atoms within structure
+    for atom_num in range(int(len(struc))):
 
-    # variables related to the self-consistent scheme I have set up to extract the desired number of NN bonds for highly distorted structures
-    shift = 0.01  # Angstroms - initial guess of how much to 'shift' radius and try to find desired number of NNs if no success initially
-    counter = 0  # some reasonable default
-    max_counter = 100  # max number of 'shifts' before changing shift value
+        cation_species = struc[atom_num].species.chemical_system
+        print(f"\natom #{atom_num} ({cation_species})")
 
-    if struc[atom_num].species != Composition(anion):  # ensure cation
-        print(f"radius = {np.round(radius, 6)} Å")
-        current_atom_neighbors = struc.get_all_neighbors_py(r=radius)[atom_num]
-        indices = []
-        distances = []
+        # variables related to the self-consistent scheme I have set up to extract the desired number of NN bonds for highly distorted structures
+        shift = 0.01  # Angstroms - initial guess of how much to 'shift' radius and try to find desired number of NNs if no success initially
+        counter = 0  # some reasonable default
+        max_counter = 100  # max number of 'shifts' before changing shift value
 
-        for nn in current_atom_neighbors:
-            if nn.species == Composition(anion):  # only want anions as first NNs
-                indices.append(nn.index)
-                distances.append(nn.nn_distance)
-
-        while len(indices) != num_NNs:
-            if counter >= max_counter:
-                counter = 0
-            counter += 1
-
-            # attempt finds less than desired number of NNs -> increase search radius by shift value
-            if len(indices) < num_NNs:
-                radius += shift
-
-            # attempt finds more than desired number of NNs -> decrease search radius by shift value
-            elif len(indices) > num_NNs:
-                radius -= shift
-
+        if struc[atom_num].species != Composition(anion):  # ensure cation
+            print(f" radius = {np.round(radius, 6)} Å")
+            current_atom_neighbors = struc.get_all_neighbors_py(r=radius)[atom_num]
             indices = []
             distances = []
 
-            print(f"radius = {np.round(radius, 6)} Å")
-            current_atom_neighbors = struc.get_all_neighbors_py(r=radius)[atom_num]
-
             for nn in current_atom_neighbors:
-                if nn.species == Composition(anion):  # only want anion since 1st NN
+                if nn.species == Composition(anion):  # only want anions as first NNs
                     indices.append(nn.index)
                     distances.append(nn.nn_distance)
-            print("\t--> {} NNs".format(len(indices)))
 
-            # only do the allowed amount of trials at each radius before making smaller
-            if counter >= max_counter:
-                # progressively make |shift| smaller for finer resolution
-                shift = shift * 0.05
+            while len(indices) != num_NNs:
+                if counter >= max_counter:
+                    counter = 0
+                counter += 1
 
-        # fail safe for if the implemented scheme still does not work to due to large deviations expected coordination
-        if len(indices) != num_NNs:
-            raise ValueError(
-                "Number of 1st NN does not equal {}!\n\t--> {}".format(
-                    num_NNs, len(indices)
+                # attempt if finds less than desired number of NNs -> increase search radius by shift value
+                if len(indices) < num_NNs:
+                    radius += shift
+
+                # attempt if finds more than desired number of NNs -> decrease search radius by shift value
+                elif len(indices) > num_NNs:
+                    radius -= shift
+
+                indices = []
+                distances = []
+
+                print(f" radius = {np.round(radius, 6)} Å")
+                current_atom_neighbors = struc.get_all_neighbors_py(r=radius)[atom_num]
+
+                for nn in current_atom_neighbors:
+                    if nn.species == Composition(anion):  # only want anion since 1st NN
+                        indices.append(nn.index)
+                        distances.append(nn.nn_distance)
+                print("\t--> {} NNs".format(len(indices)))
+
+                # only do the allowed amount of trials at each radius before making smaller
+                if counter >= max_counter:
+                    # progressively make |shift| smaller for finer resolution
+                    shift = shift * 0.05
+
+            # fail safe for if the implemented scheme still does not work to due to large deviations expected coordination
+            if len(indices) != num_NNs:
+                raise ValueError(
+                    "Number of 1st NN does not equal {}!\n\t--> {}".format(
+                        num_NNs, len(indices)
+                    )
                 )
-            )
 
-    else:  # should be anion - printing for clarity
-        print("Current atom is an anion ({})!".format(anion))
+            print(f" bondlengths = {np.round(distances, 3)} Å")
 
-    return (distances, indices)
+            all_data["species"].extend([cation_species] * 6)
+            all_data["distance"].extend(distances)
+            all_data["anion index"].extend(indices)
+
+    print(
+        f"A total of {len(all_data['distance'])} cation-anion first NN bonds were found."
+    )
+
+    return pd.DataFrame.from_dict(all_data)
 
 
 def extract_octahedral_bondangles(
-    struc: Atoms,
+    struc: Structure,
     bsite_cations: list,
-    bondlength_max=2.5,
-    bondangle_min=120,
+    max_bondlength=2.5,
+    min_bondangle=120,
 ) -> pd.DataFrame:
     """
-    Given a structure file, extracts the B-O-B bond angles - tested only within a perovskite structure, however this should (in theory) work for other structure...
+    Given a structure file, extracts the B-O-B bond angles.
+    - This is only tested and usually used for a perovskite structure, however this should (at least in theory) work for other structures...
     - NOTE currently does NOT take into account PBCs, thus you may want to utilize a 2x2x2 supercell of your relaxed calculation...
 
     Args:
-        struc (Atoms): ASE Atoms object of structure
+        struc (Structure): Pymatgen Structure object.
         bsite_cations (tuple): b-site cations that will be searched over. Example: ["Ti"], or ["Ti", "V"]
-        bondlength_max (float, optional): maximum bond length allowed between atom1-atom2 & atom2-atom3. Defaults to 2.5 for a reasonable default.
-        bondangle_min (int, optional): minimum bond angle allowed. Defaults to 120 for a reasonable value.
-
+        max_bondlength (float, optional): maximum bond length allowed between atom1-atom2 & atom2-atom3. Defaults to 2.5 for a reasonable default.
+        min_bondangle (int, optional): minimum bond angle allowed. Defaults to 120 for a reasonable value.
 
     Returns:
         Pandas DataFrame: bond lengths for B-O-B combinations including atom numbers and species
@@ -208,8 +217,6 @@ def extract_octahedral_bondangles(
 
     print(f"Extracting average octahedral bond angles...")
     print(f"bsite cations: {bsite_cations}")
-
-    struc = Structure.from_ase_atoms(struc)
 
     len_struc = np.arange(0, len(struc))
     counter = 0
@@ -234,12 +241,12 @@ def extract_octahedral_bondangles(
                 if atom1 != atom2:
                     if (
                         struc[atom2].species == Composition("O")
-                        and struc.get_distance(atom1, atom2) < bondlength_max
+                        and struc.get_distance(atom1, atom2) < max_bondlength
                     ):
                         for atom3 in len_struc:
                             if (
                                 struc[atom3].species in bsite_compositions
-                                and struc.get_distance(atom2, atom3) < bondlength_max
+                                and struc.get_distance(atom2, atom3) < max_bondlength
                             ):
                                 if (
                                     atom1 != atom3
@@ -253,7 +260,7 @@ def extract_octahedral_bondangles(
                                     ] not in tracker_list:
                                         if (
                                             struc.get_angle(atom1, atom2, atom3)
-                                            > bondangle_min
+                                            > min_bondangle
                                         ):
                                             print(
                                                 f"\t{struc[atom1].species}(#{atom1}) - {struc[atom2].species}(#{atom2}) - {struc[atom3].species}(#{atom3}) -> {struc.get_angle(atom1, atom2, atom3):.1f}\u00b0"

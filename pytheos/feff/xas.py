@@ -1,7 +1,6 @@
 # module to facilitate FEFF x-ray absorption spectra (XAS) simulations
 # see https://feff.phys.washington.edu/index-feffproject.html
 
-from ase import Atoms
 from pandas import DataFrame
 from pymatgen.core import Structure
 from pymatgen.io.feff import sets
@@ -12,7 +11,7 @@ import pandas as pd
 
 
 def write_xanes_inputs(
-    structure: Atoms,
+    struc: Structure,
     absorbing_atom: int,
     output_dir: str,
     user_xanes_changes: dict = None,
@@ -22,7 +21,7 @@ def write_xanes_inputs(
     Each FEFF calculation should be run in its own directory to ensure files are not overwritten.
 
     Args:
-        structure (Atoms): ASE Atoms object for structure.
+        struc (Structure): Pymatgen Structure object.
         absorbing_atom (int): Number in structure for absorbing atom of interest.
         output_dir (str): Relative path to create output directory with associated files.
         user_xanes_changes (dict, optional): Override for default card settings in 'xanes_cards.yaml'. Defaults to None.
@@ -36,8 +35,6 @@ def write_xanes_inputs(
 
     if os.path.exists(output_dir):
         raise FileExistsError(output_dir)
-
-    struc = Structure.from_ase_atoms(structure)
 
     print(f"-> structure = {struc.composition.formula}")
     print(

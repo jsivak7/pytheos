@@ -1,6 +1,5 @@
 # for VASP input file generation
 
-from ase import Atoms
 import os
 import yaml
 from pymatgen.core import Structure
@@ -20,24 +19,24 @@ class CalcInputs:
     Likely will get a "BadInputSetWarning", but just ignore once you check you are using the correct POTCARs (see https://matsci.org/t/potcar-warning-msg/34562).
 
     Attributes:
-        structure (Atoms): Initial structure as sorted Pymatgen Structure object.
+        struc (Structure): Initial structure as sorted Pymatgen Structure object.
         incar (INCAR): Pymatgen INCAR object.
         poscar (POSCAR): Pymatgen POSCAR object.
         potcar (POTCAR): Pymatgen POTCAR object.
     """
 
-    def __init__(self, structure: Atoms, mp_input_set: str = "MPScanRelaxSet"):
+    def __init__(self, struc: Structure, mp_input_set: str = "MPScanRelaxSet"):
         """
         Args:
-            structure (Atoms): Initial structure as ASE Atoms.
+            struc (Structure): Initial structure as Pymatgen Structure object.
             mp_input_set (str): Materials Project VASP input set for VASP calculations. Options are: "MPRelaxSet" or "MPScanRelaxSet". Defaults to "MPScanRelaxSet".
 
         Raises:
             Exception: If supplied `mp_input_set` has not been implemented.
         """
 
-        # convert ASE Atoms to Pymatgen Structure and sort
-        self.structure = Structure.from_ase_atoms(structure).sort()
+        # sort structure
+        self.struc = struc.sort()
 
         # get path to pytheos module + get customized pytheos MP set
         module_dir = os.path.dirname(__file__)
@@ -137,7 +136,7 @@ class CalcInputs:
         spin_counts = {"up": 0, "down": 0}
         atom_index = 0
 
-        for atom in self.structure:
+        for atom in self.struc:
 
             # round atom coordinates
             atom_coords = np.round(atom.coords, coord_decimals)
@@ -229,7 +228,7 @@ class CalcInputs:
         """
 
         input_set = MPRelaxSet(
-            structure=self.structure,
+            structure=self.struc,
             user_incar_settings=incar_settings,
             user_potcar_functional="PBE",
         ).get_input_set()
@@ -249,7 +248,7 @@ class CalcInputs:
             VaspInput: Pymatgen objects for VASP inputs (INCAR, POSCAR, POTCAR)
         """
         input_set = MPScanRelaxSet(
-            structure=self.structure,
+            structure=self.struc,
             user_incar_settings=incar_settings,
             user_potcar_functional="PBE_54",
         ).get_input_set()
