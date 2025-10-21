@@ -110,12 +110,13 @@ def extract_firstNN_bonds(
         ValueError: If implemented self-consistent scheme still cannot find correct number of NNs.
 
     Returns:
-        dict: {"distances": 1D list bondlengths, "indices": 1D list anion indices corresponding to bond lengths}
+        Pandas DataFrame: containing cation species, bond length distance (in Angstroms), cation index, and anion index
     """
 
     all_data = {
-        "species": [],
+        "cation": [],
         "distance": [],
+        "cation index": [],
         "anion index": [],
     }
 
@@ -181,8 +182,9 @@ def extract_firstNN_bonds(
 
             print(f" bondlengths = {np.round(distances, 3)} Å")
 
-            all_data["species"].extend([cation_species] * 6)
+            all_data["cation"].extend([cation_species] * 6)
             all_data["distance"].extend(distances)
+            all_data["cation index"].extend([atom_num] * 6)
             all_data["anion index"].extend(indices)
 
     print(
