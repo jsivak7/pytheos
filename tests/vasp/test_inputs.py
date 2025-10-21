@@ -82,7 +82,7 @@ def test_apply_mag_order(fake_potcar_patch):
     wanted to make sure this is working as expected.
     """
 
-    supercell = Structure.from_file(f"{current_dir}/../files/NiO_prim_2x2x2.poscar")
+    supercell = Structure.from_file(f"{current_dir}/../files/NiO_prim_2x2x2.vasp")
 
     calcinputs = CalcInputs(struc=supercell)
 
