@@ -1,7 +1,7 @@
 # for getting data from VASP calculation outputs
 # see https://www.vasp.at/wiki/index.php/The_VASP_Manual
 
-from pymatgen.io.vasp import Vasprun
+from pymatgen.io.vasp import Vasprun, Outcar
 from pandas import DataFrame
 import os
 import pandas as pd
@@ -15,11 +15,12 @@ class CalcOutputs:
         source_dir (str): Relative path to source directory from which VASP files will be loaded.
             Defaults to "".
         vasprun (Vasprun): Pymatgen Vasprun object.
+        outcar (Outcar): Pymatgen Outcar object.
         structure (Structure): Final structure as a Pymatgen Structure object.
         num_atoms (int): Number of atoms.
         volume (float): Final volume of structure in Angstroms^3.
-        lattice_parameters (dict): Final lattice parameters (a, b, c) in Angstroms.
-        lattice_angles (dict): Final lattice angles (alpha, beta, gamma), in degrees.
+        lattice_parameters (dict[str: float]): Final lattice parameters in Angstroms, e.g., {"a": 4.20, "b": 4.19, "c": 4.25}.
+        lattice_angles (dict[str: float]): Final lattice angles in degrees, e.g., {"alpha": 90, "beta": 90, "gamma": 90}.
         composition (Composition): Pymatgen Composition object. Example - "Mg8 O8".
         chemical_system (str): Chemical system of structure. Example - "Mg-Co-O".
         final_energy (float): Final energy in eV.
@@ -28,6 +29,7 @@ class CalcOutputs:
         fermi_energy (float): Fermi energy in eV.
         cbm (float): Conduction band minima (CBM) in eV.
         vbm (float): Valence band maxima (VBM) in eV.
+        magnetization (tuple[dict[str: float]]): magnetization on each atom, e.g., ({"s": 0.00, "p": -0.03, "d": 0.57, "tot: 0.54}, ...)
     """
 
     def __init__(self, source_dir: str = "./") -> None:
@@ -41,6 +43,7 @@ class CalcOutputs:
 
         # contains built-in convergence check (ionic & electronic)
         self.vasprun = load_vasprun(f"{self.source_dir}/vasprun.xml")
+        self.outcar = Outcar(filename=f"{self.source_dir}/OUTCAR")
 
         self.structure = self.vasprun.final_structure
         self.num_atoms = self.structure.num_sites
@@ -66,6 +69,8 @@ class CalcOutputs:
         self.fermi_energy = self.vasprun.efermi
         self.cbm = self.vasprun.eigenvalue_band_properties[1]
         self.vbm = self.vasprun.eigenvalue_band_properties[2]
+
+        self.magnetization = self.outcar.magnetization
 
         return None
 
