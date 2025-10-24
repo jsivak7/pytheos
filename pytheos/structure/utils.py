@@ -33,4 +33,4 @@ def rattle_atoms(
 
     struc = Structure.from_ase_atoms(struc)
 
-    return structure
+    return struc
