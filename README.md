@@ -18,7 +18,7 @@ Our goal for this package is to consolidate code that has assisted our team in o
 
 A list of publications that have led to the development of `pytheos` can be found [here](docs/publications.md).
 
-Examples of how to use `pytheos` can be found [here](examples/) (*still a work in progress*).
+Notebooks showing how to use `pytheos` can be found [here](notebooks/) (*still a work in progress*).
 
 ## Installation
 1. (*optional*) Create a new python virtual environment and activate it.
