@@ -37,8 +37,8 @@ class ChemPotDiagram:
         {"formula": values, "cation (eV)": values, "anion (eV)": values}. Defaults to None.
         target_ranges (DataFrame): Pandas DataFrame for stable chemical potential ranges for target compound.
             Same DataFrame format as `all_stable_ranges`. Defaults to None.
-        target_anion_range (tuple): Bounds along anion chemical potential axis where target compound is stable.
-            Takes the format (min, max, distance) - all in eV. Defaults to None.
+        target_anion_range (dict): Bounds along anion chemical potential axis where target compound is stable.
+            Takes the format {"min": float, "max": float, "distance": float) - all in eV. Defaults to None.
         diagram (Figure): Matplotlib figure object of 2D chemical potential diagram with x-axis being cation
             and y-axis being anion. Defaults to None.
     """
@@ -118,7 +118,7 @@ class ChemPotDiagram:
             Exception: If target compound was not supplied to ChemPotDiagram instance.
 
         Returns:
-            tuple: (minimum, maximum, distance) in eV
+            dict: {"min": float, "max": float, "distance": float) - all in eV.
         """
 
         if self.target_compound is None:
@@ -134,11 +134,11 @@ class ChemPotDiagram:
                 target_anion_max = range_map[entry][0].coords.max()
                 target_anion_distance = abs(target_anion_min - target_anion_max)
 
-                self.target_anion_range = (
-                    target_anion_min,
-                    target_anion_max,
-                    target_anion_distance,
-                )
+                self.target_anion_range = {
+                    "min": target_anion_min,
+                    "max": target_anion_max,
+                    "distance": target_anion_distance,
+                }
 
         return self.target_anion_range
 
@@ -350,3 +350,43 @@ class ChemPotDiagram:
         plt.close()
 
         return self.diagram
+
+
+def calc_overlap(ranges: list):
+    """
+    Calculates overlap between a series of ranges.
+
+    Args:
+        ranges (list): Ranges for some series of values with the format: [(min1, max1), (min2, max2)].
+            E.g., [(0, 1), (-0.25, 0.5)]. Supports an arbitrary number of supplied ranges.
+
+    Raises:
+        Exception: if less than 2 ranges are supplied.
+
+    Returns:
+        dict: {
+        "overlap": overlap between supplied ranges,
+        "lower bound": lower boundary for overlap,
+        "upper bound": upper boundary for overlap,
+        }
+    """
+
+    if len(ranges) < 2:
+        raise Exception(
+            "You only supplied one range, to calculate an overlap you must have at least two ranges."
+        )
+
+    minimums = []
+    maximums = []
+
+    for range in ranges:
+        minimums.append(range[0])
+        maximums.append(range[1])
+
+    overlap = min(maximums) - max(minimums)
+
+    return {
+        "overlap": overlap,
+        "lower bound": max(minimums),
+        "upper bound": min(maximums),
+    }
