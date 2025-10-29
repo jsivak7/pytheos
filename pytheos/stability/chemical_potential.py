@@ -352,12 +352,12 @@ class ChemPotDiagram:
         return self.diagram
 
 
-def calc_overlap(ranges: list):
+def calc_overlap(ranges: list[tuple]):
     """
     Calculates overlap between a series of ranges.
 
     Args:
-        ranges (list): Ranges for some series of values with the format: [(min1, max1), (min2, max2)].
+        ranges (list[tuple]): Ranges for some series of values with the format: [(min1, max1), (min2, max2)].
             E.g., [(0, 1), (-0.25, 0.5)]. Supports an arbitrary number of supplied ranges.
 
     Raises:
