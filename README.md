@@ -41,7 +41,7 @@ pip install -e .
 ```
 
 ## Development & Bugs
-In case you run into any issues please contact Jacob (jts6114@psu.edu) as this package is under active development. Thank you for any suggestions and contributions!
+In case you run into any issues please contact Jacob (jacobsivak7@gmail.com) as this package is under active development. Thank you for any suggestions and contributions!
 
 ## Funding
 This package is supported by the Penn State MRSEC [[DMR-2011839](https://www.mrsec.psu.edu)].
